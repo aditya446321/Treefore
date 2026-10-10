@@ -37,15 +37,24 @@
 </header>
 
 <section class="hero">
-  <p class="eyebrow">Folder → ZIP → GitHub</p>
-  <h1>Turn a folder tree into a <em>real project</em>.</h1>
-  <p class="sub">Paste an ASCII tree or drop a folder. Download a ZIP, or push every file to GitHub in a single commit — even from your phone.</p>
-  <div class="steps"><span>1 · Paste or drop</span><span>2 · Preview</span><span>3 · ZIP or push</span></div>
+  <div class="hero-copy">
+    <p class="badge"><i></i>Free · No sign-up · Runs in your browser</p>
+    <h1>Your folder tree, <em>shipped</em> in one click.</h1>
+    <p class="sub">Paste a tree or drop a folder. TreeForge builds every file, then gives you a ZIP or pushes it all to GitHub in a single commit.</p>
+    <div class="cta"><button class="btn primary" id="ctaPaste">Paste a tree</button><button class="btn" id="ctaDrop">Drop a folder</button></div>
+    <ul class="autos"><li>Reads your clipboard</li><li>Names your project</li><li>Saves your draft</li><li>Picks the repo for you</li></ul>
+  </div>
+  <div class="forge" aria-hidden="true">
+    <pre class="ft"><span style="--i:0">my-app/</span><span style="--i:1">├── <b class="o">src/</b></span><span style="--i:2">│   ├── <b class="l">App.jsx</b></span><span style="--i:3">│   └── <b class="l">main.jsx</b></span><span style="--i:4">├── <b class="c">package.json</b></span><span style="--i:5">└── <b class="c">README.md</b></span></pre>
+    <div class="belt"><i></i><i></i><i></i></div>
+    <div class="outs"><div class="out"><em class="d1"></em>my-app.zip<b>✓</b></div><div class="out"><em class="d2"></em>GitHub · 1 push<b>✓</b></div></div>
+  </div>
 </section>
 
 <noscript><p class="wrap">TreeForge needs JavaScript to run.</p></noscript>
 
-<main class="wrap">
+<div id="dropAll" hidden><div>Drop to load your folder</div></div>
+<main class="wrap" id="app">
   <section class="card input">
     <h2>1. Input</h2>
     <div class="tabs" role="tablist">
@@ -59,8 +68,8 @@
       <label class="lbl" for="treeText">Tree text</label>
       <textarea id="treeText" class="field mono tree-ta" spellcheck="false" placeholder="my-app/&#10;├── src/&#10;│   └── main.js&#10;└── README.md"></textarea>
       <div class="row">
-        <label class="chk"><input type="checkbox" id="gitkeep" checked> Add <code>.gitkeep</code> to empty folders</label>
-        <label class="chk"><input type="checkbox" id="starter"> Starter text in README / package.json</label>
+        <label class="chk"><input type="checkbox" id="gitkeep" checked> Keep empty folders (<code>.gitkeep</code>)</label>
+        <label class="chk"><input type="checkbox" id="starter" checked> Smart extras: README, .gitignore, starter text</label>
       </div>
     </div>
 
@@ -91,6 +100,7 @@
     <div class="head"><h2>Preview</h2><span id="counts" class="muted mono"></span></div>
     <input id="filter" class="field" placeholder="Filter files..." autocomplete="off">
     <div id="tree" class="treebox mono"></div>
+    <div id="autoNote" class="autonote"></div>
     <div id="warns" class="warns" hidden></div>
   </section>
 </main>

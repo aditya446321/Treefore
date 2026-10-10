@@ -6,6 +6,7 @@
   function parseTree(text) {
     const warnings = [], rows = [];
     text.split('\n').forEach((raw, i) => {
+      if (/^\s*```/.test(raw)) return;
       let line = raw.replace(/\r/g, '').replace(/\t/g, '    ').replace(/\s+#.*$/, '');
       if (!line.trim()) return;
       const L = line.match(PREFIX)[0].length;

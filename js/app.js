@@ -22,7 +22,7 @@
 ├── .gitignore
 └── README.md`;
 
-  const S = { mode: 'paste', roots: [], files: [], warns: [], upload: [], token: '', user: null, repos: [], repo: null, target: 'existing', busy: false };
+  const S = { nameTouched: false, msgTouched: false, mode: 'paste', roots: [], files: [], warns: [], upload: [], token: '', user: null, repos: [], repo: null, target: 'existing', busy: false };
   const store = {
     get: k => { try { return localStorage.getItem(k) || ''; } catch (_) { return ''; } },
     set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (_) {} }
@@ -36,14 +36,33 @@
   const show = (el, msg) => { el.textContent = msg || ''; el.hidden = !msg; };
 
   /* ---------- tree + files ---------- */
+  const GI = { node: 'node_modules/\ndist/\n.env\n', py: '__pycache__/\n*.pyc\n.venv/\n.env\n', android: '.gradle/\nbuild/\nlocal.properties\n.idea/\n', '': '.env\n' };
+  function extras(files, name) {
+    const tops = new Set(files.map(f => f.path.split('/')[0]));
+    const top = files.length && files.every(f => f.path.includes('/')) && tops.size === 1 ? [...tops][0] + '/' : '';
+    const has = n => files.some(f => f.path === top + n), add = [];
+    const kind = files.some(f => /(^|\/)package\.json$/.test(f.path)) ? 'node' : files.some(f => /\.py$|pyproject\.toml$/.test(f.path)) ? 'py' : files.some(f => /\.kts?$|build\.gradle/.test(f.path)) ? 'android' : '';
+    if (!has('README.md')) add.push({ path: top + 'README.md', content: `# ${name}\n` });
+    if (!has('.gitignore')) add.push({ path: top + '.gitignore', content: GI[kind] + '.DS_Store\n' });
+    return add;
+  }
+  function autoName() {
+    if (S.nameTouched) return;
+    const tops = new Set(S.files.map(f => f.path.split('/')[0]));
+    const multi = S.files.every(f => f.path.includes('/'));
+    if (S.files.length && multi && tops.size === 1) $('projName').value = [...tops][0].replace(/[^\w.-]/g, '-').slice(0, 60);
+  }
   function recompute() {
+    S.auto = [];
     if (S.mode === 'paste') {
       const p = TF.parseTree($('treeText').value);
-      S.roots = p.roots; S.warns = p.warnings;
+      S.warns = p.warnings;
       S.files = TF.flatten(p.roots, { gitkeep: $('gitkeep').checked, starter: $('starter').checked, name: projName() });
-    } else {
-      S.files = S.upload; S.warns = []; S.roots = TF.fromPaths(S.upload.map(f => f.path));
-    }
+      autoName();
+      if ($('starter').checked) { const ex = extras(S.files, projName()); S.files = S.files.concat(ex); S.auto = ex.map(f => f.path.split('/').pop()); }
+      store.set('tf_draft', JSON.stringify({ t: $('treeText').value, n: $('projName').value, nt: S.nameTouched }));
+    } else { S.files = S.upload; S.warns = []; autoName(); }
+    S.roots = TF.fromPaths(S.files.map(f => f.path));
     render();
   }
 
@@ -65,6 +84,7 @@
     $('tree').innerHTML = nodes.length ? nodes.map(n => nodeHtml(n, true)).join('') : `<div class="empty">${S.roots.length ? 'No matches.' : 'Nothing here yet. Paste a tree or upload a folder.'}</div>`;
     const c = TF.count(S.roots);
     $('counts').textContent = `${c.folders} folders · ${S.files.length} files`;
+    $('autoNote').innerHTML = S.auto && S.auto.length ? `<b>Auto-added:</b> ${S.auto.map(esc).join(', ')}` : '';
     show($('warns'), S.warns.join('\n')); $('warns').style.whiteSpace = 'pre-line';
     const has = S.files.length > 0;
     $('zipBtn').disabled = !has; $('pushBtn').disabled = !has;
@@ -148,12 +168,26 @@
       `<button class="repo${S.repo && S.repo.full_name === r.full_name ? ' on' : ''}" data-repo="${esc(r.full_name)}"><span>${esc(r.full_name)}${r.private ? ' 🔒' : ''}</span><small>${esc(r.default_branch || '')}</small></button>`).join('')
       : '<div class="empty muted" style="padding:14px">No repos found. Try “New repo”.</div>';
   }
+  function setTarget(t) {
+    S.target = t;
+    document.querySelectorAll('[data-target]').forEach(x => x.classList.toggle('on', x.dataset.target === t));
+    $('existingBox').hidden = t !== 'existing'; $('newBox').hidden = t !== 'new';
+  }
+  function autoPick() {
+    let last = null; try { last = JSON.parse(store.get('tf_last') || 'null'); } catch (_) {}
+    const name = projName().toLowerCase();
+    const r = (!S.repo && (S.repos.find(x => last && x.full_name === last.repo) || S.repos.find(x => x.name.toLowerCase() === name))) || S.repo;
+    if (r) { S.repo = r; $('branch').value = (last && last.repo === r.full_name && last.branch) || r.default_branch || 'main'; setTarget('existing'); }
+    else { setTarget('new'); $('branch').value = $('branch').value || 'main'; }
+    renderRepos();
+  }
   function openPush() {
     if (!S.user) { show($('connectErr'), ''); $('connectDlg').showModal(); return; }
     $('fileCount').textContent = TF.stripRoot(S.files).length + ' files';
     if (!$('newName').value) $('newName').value = projName();
     show($('pushErr'), ''); show($('pushOk'), ''); $('step').textContent = ''; $('bar').hidden = true;
-    renderRepos(); $('pushDlg').showModal();
+    if (!S.msgTouched) $('commitMsg').value = `Add ${projName()} via TreeForge`;
+    autoPick(); $('pushDlg').showModal();
   }
   async function doPush() {
     show($('pushErr'), ''); show($('pushOk'), '');
@@ -170,7 +204,9 @@
       });
       $('step').textContent = 'Done!';
       $('pushOk').innerHTML = `<b>Pushed ✅</b><br><a href="${esc(r.repoUrl)}" target="_blank" rel="noopener">Open repo →</a><br><a href="${esc(r.commitUrl)}" target="_blank" rel="noopener">Commit ${esc(r.sha.slice(0, 7))} view →</a>`;
-      $('pushOk').hidden = false; toast('Pushed to GitHub', 'success');
+      $('pushOk').hidden = false; toast('Pushed to GitHub. Repo link copied.', 'success');
+      try { navigator.clipboard.writeText(r.repoUrl); } catch (_) {}
+      store.set('tf_last', JSON.stringify({ repo: isNew ? r.repoUrl.split('github.com/')[1] : S.repo.full_name, branch: $('branch').value.trim() }));
       if (isNew) TF.gh.listRepos(S.token).then(l => { S.repos = l; });
     } catch (e) { show($('pushErr'), e.message || 'Push failed'); $('step').textContent = ''; }
     finally { btn.disabled = false; }
@@ -178,17 +214,22 @@
 
   /* ---------- wiring ---------- */
   function init() {
-    $('treeText').value = SAMPLE;
+    let dr = null; try { dr = JSON.parse(store.get('tf_draft') || 'null'); } catch (_) {}
+    $('treeText').value = dr && dr.t ? dr.t : SAMPLE;
+    if (dr && dr.n) { $('projName').value = dr.n; S.nameTouched = !!dr.nt; }
+    $('projName').addEventListener('input', () => (S.nameTouched = true));
+    $('commitMsg').addEventListener('input', () => (S.msgTouched = true));
     let t; const deb = () => { clearTimeout(t); t = setTimeout(recompute, 150); };
     ['treeText', 'projName'].forEach(id => $(id).addEventListener('input', deb));
     ['gitkeep', 'starter'].forEach(id => $(id).addEventListener('change', recompute));
     $('filter').addEventListener('input', render);
 
-    document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => {
-      S.mode = b.dataset.mode;
-      document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === b));
-      $('pasteBox').hidden = S.mode !== 'paste'; $('uploadBox').hidden = S.mode !== 'upload'; recompute();
-    });
+    function setMode(m) {
+      S.mode = m;
+      document.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x.dataset.mode === m));
+      $('pasteBox').hidden = m !== 'paste'; $('uploadBox').hidden = m !== 'upload'; recompute();
+    }
+    document.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
     $('pickFolder').onclick = () => $('folderInput').click();
     $('pickFiles').onclick = () => $('filesInput').click();
     $('folderInput').onchange = e => setUpload([...e.target.files]);
@@ -196,13 +237,32 @@
     const drop = $('drop');
     drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
     drop.ondragleave = () => drop.classList.remove('over');
-    drop.ondrop = async e => {
-      e.preventDefault(); drop.classList.remove('over'); drop.classList.add('busy');
-      const items = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
-      if (items.length) setUpload((await Promise.all(items.map(i => readEntry(i)))).flat());
-      else setUpload([...e.dataTransfer.files]);
+    async function loadDrop(dt) {
+      setMode('upload'); drop.classList.add('busy');
+      const items = [...(dt.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
+      if (items.length) setUpload((await Promise.all(items.map(i => readEntry(i)))).flat()); else setUpload([...dt.files]);
       setTimeout(() => drop.classList.remove('busy'), 500);
-    };
+      toast('Folder loaded', 'success');
+    }
+    drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); };
+    let dc = 0; const all = $('dropAll');
+    const hasFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+    window.addEventListener('dragenter', e => { if (hasFiles(e)) { dc++; all.hidden = false; } });
+    window.addEventListener('dragleave', e => { if (hasFiles(e) && --dc <= 0) { dc = 0; all.hidden = true; } });
+    window.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+    window.addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); dc = 0; all.hidden = true; loadDrop(e.dataTransfer); });
+
+    document.addEventListener('paste', e => {
+      const el = e.target, txt = (e.clipboardData && e.clipboardData.getData('text')) || '';
+      if (el === $('tokenInput')) { setTimeout(() => /^(ghp_|github_pat_|gho_)/.test($('tokenInput').value.trim()) && $('connectBtn').click(), 50); return; }
+      if (/^(INPUT|TEXTAREA)$/.test(el.tagName) || document.querySelector('dialog[open]')) return;
+      const lines = txt.split('\n').filter(l => l.trim());
+      if (lines.length >= 2 && lines.some(l => /[├└│]|\/\s*$|^\s{2,}\S/.test(l))) {
+        e.preventDefault(); S.nameTouched = false; setMode('paste'); $('treeText').value = txt.replace(/^\s*```.*\n?/gm, '').trimEnd(); recompute(); toast('Tree detected from clipboard', 'success');
+      }
+    });
+    $('ctaPaste').onclick = () => { setMode('paste'); $('app').scrollIntoView({ behavior: 'smooth' }); setTimeout(() => $('treeText').focus(), 400); };
+    $('ctaDrop').onclick = () => { setMode('upload'); $('app').scrollIntoView({ behavior: 'smooth' }); $('folderInput').click(); };
 
     $('zipBtn').onclick = downloadZip;
     $('pushBtn').onclick = openPush;
@@ -220,11 +280,7 @@
       S.token = ''; S.user = null; S.repos = []; S.repo = null; store.set('treeforge_token', '');
       ghStatus(); $('connectDlg').close(); toast('Disconnected, token removed');
     };
-    document.querySelectorAll('[data-target]').forEach(b => b.onclick = () => {
-      S.target = b.dataset.target;
-      document.querySelectorAll('[data-target]').forEach(x => x.classList.toggle('on', x === b));
-      $('existingBox').hidden = S.target !== 'existing'; $('newBox').hidden = S.target !== 'new';
-    });
+    document.querySelectorAll('[data-target]').forEach(b => b.onclick = () => setTarget(b.dataset.target));
     $('repoSearch').addEventListener('input', renderRepos);
     $('repoList').onclick = e => {
       const b = e.target.closest('[data-repo]'); if (!b) return;
