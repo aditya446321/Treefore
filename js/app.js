@@ -237,8 +237,8 @@
   function ghStatus() {
     const c = $('conn');
     c.innerHTML = S.user
-      ? `<span class="dot on"></span><span>Connected as <b>${esc(S.user.login)}</b></span><button type="button" class="link" id="disBtn">Disconnect</button><small>🔒 Saved on this device until it expires</small>`
-      : `<span class="dot"></span><span>Not connected</span><small>🔒 Your token stays on this device. Requests go straight to GitHub.</small>`;
+      ? `<span class="dot on"></span><span>Connected as <b>${esc(S.user.login)}</b></span><button type="button" class="link" id="disBtn">Disconnect</button>`
+      : `<span class="dot"></span><span>Not connected</span>`;
     $('pushBtn').textContent = S.user ? 'Choose repo & push' : 'Connect & push';
   }
   function disconnect() {

@@ -38,11 +38,10 @@
 
 <section class="hero">
   <div class="hero-copy">
-    <p class="badge"><i></i>Free · No sign-up · Runs in your browser</p>
-    <h1>Your folder tree, <em>shipped</em> in one click.</h1>
-    <p class="sub">Paste a tree or drop a folder. TreeForge builds every file, then gives you a ZIP or pushes it all to GitHub in a single commit.</p>
+    <p class="badge"><i></i>Free · Runs in your browser</p>
+    <h1>Folder tree to <em>ZIP or GitHub</em>.</h1>
+    <p class="sub">Paste or write a tree, or drop a folder. Download it, or push it to GitHub in one go.</p>
     <div class="cta"><button class="btn primary" id="ctaPaste">Paste a tree</button><button class="btn" id="ctaDrop">Drop a folder</button></div>
-    <ul class="autos"><li>Reads your clipboard</li><li>Names your project</li><li>Saves your draft</li><li>Picks the repo for you</li><li>Sets up empty repos</li><li>Stays connected</li></ul>
   </div>
   <div class="forge" aria-hidden="true">
     <pre class="ft"><span style="--i:0">my-app/</span><span style="--i:1">├── <b class="o">src/</b></span><span style="--i:2">│   ├── <b class="l">App.jsx</b></span><span style="--i:3">│   └── <b class="l">main.jsx</b></span><span style="--i:4">├── <b class="c">package.json</b></span><span style="--i:5">└── <b class="c">README.md</b></span></pre>
@@ -122,6 +121,7 @@
 <dialog id="connectDlg">
   <div class="dhead"><b>Connect GitHub</b><button class="x" data-close>✕</button></div>
   <p class="muted">A Personal Access Token is required (classic: <code>repo</code> scope; fine-grained: Contents → Read &amp; write). <a href="https://github.com/settings/tokens/new?scopes=repo&description=TreeForge" target="_blank" rel="noopener">Create a token →</a></p>
+  <p class="muted small">Your token stays on this device. Requests go straight to GitHub.</p>
   <input id="tokenInput" class="field mono" type="password" placeholder="ghp_... ya github_pat_..." autocomplete="off">
   <div class="row"><button class="btn primary" id="connectBtn">Connect</button></div>
   <div class="err" id="connectErr" hidden></div>
