@@ -10,6 +10,7 @@
   const EXT = {}; Object.entries(CATS).forEach(([c, l]) => l.split(' ').forEach(e => (EXT[e] = c)));
   const cat = n => EXT[(n.includes('.') ? n.split('.').pop() : '').toLowerCase()] || 'other';
   const SKIP = /(^|\/)(\.git|node_modules|\.DS_Store)(\/|$)/;
+  const TOK = 'treeforge_token', USR = 'treeforge_user';
   const SAMPLE = `my-app/
 ├── src/
 │   ├── components/
@@ -22,7 +23,7 @@
 ├── .gitignore
 └── README.md`;
 
-  const S = { nameTouched: false, msgTouched: false, mode: 'paste', roots: [], files: [], warns: [], upload: [], token: '', user: null, repos: [], repo: null, target: 'existing', busy: false };
+  const S = { nameTouched: false, msgTouched: false, mode: 'paste', roots: [], files: [], warns: [], upload: [], token: '', user: null, repos: [], repo: null, target: 'existing', busy: false, loading: false, reposLoaded: false };
   const store = {
     get: k => { try { return localStorage.getItem(k) || ''; } catch (_) { return ''; } },
     set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (_) {} }
@@ -85,9 +86,98 @@
     const c = TF.count(S.roots);
     $('counts').textContent = `${c.folders} folders · ${S.files.length} files`;
     $('autoNote').innerHTML = S.auto && S.auto.length ? `<b>Auto-added:</b> ${S.auto.map(esc).join(', ')}` : '';
-    show($('warns'), S.warns.join('\n')); $('warns').style.whiteSpace = 'pre-line';
+    renderWarns();
     const has = S.files.length > 0;
     $('zipBtn').disabled = !has; $('pushBtn').disabled = !has;
+  }
+
+  /* ---------- friendly checks ---------- */
+  function renderWarns() {
+    const box = $('warns'), w = S.mode === 'paste' ? S.warns : [];
+    if (!w.length) { box.hidden = true; box.innerHTML = ''; return; }
+    const fixable = w.filter(x => x.fix !== null).length;
+    box.innerHTML = `<div class="wh"><b>${w.length} thing${w.length > 1 ? 's' : ''} to check</b>${fixable ? `<button type="button" class="btn sm primary" id="fixAll">Fix ${fixable}</button>` : ''}</div>`
+      + w.slice(0, 5).map(x => `<button type="button" class="wi" data-line="${x.line}"><span>${esc(x.msg)}</span>${x.how ? `<small>How to fix: ${esc(x.how)}</small>` : ''}</button>`).join('')
+      + (w.length > 5 ? `<div class="more">+${w.length - 5} more. Fix these first.</div>` : '');
+    box.hidden = false;
+  }
+  function jumpTo(n) {
+    const ta = $('treeText'), lines = ta.value.split('\n'); let s = 0;
+    for (let i = 0; i < n && i < lines.length; i++) s += lines[i].length + 1;
+    ta.focus(); ta.setSelectionRange(s, s + (lines[n] || '').length);
+    ta.scrollTop = Math.max(0, n * 19.5 - 70);
+  }
+  function fixAll() {
+    const ta = $('treeText'); let txt = ta.value;
+    for (let k = 0; k < 3; k++) {
+      const p = TF.parseTree(txt);
+      if (!p.warnings.some(w => w.fix !== null)) break;
+      const nt = TF.applyFixes(txt, p.warnings); if (nt === txt) break; txt = nt;
+    }
+    ta.value = txt; recompute(); toast('Fixed', 'success');
+  }
+
+  /* ---------- tree writing helpers ---------- */
+  function setupEditor() {
+    const ta = $('treeText');
+    const bounds = pos => { const v = ta.value, s = pos ? v.lastIndexOf('\n', pos - 1) + 1 : 0; let e = v.indexOf('\n', pos); if (e < 0) e = v.length; return [s, e]; };
+    const insert = text => { ta.focus(); if (!document.execCommand || !document.execCommand('insertText', false, text)) { ta.setRangeText(text, ta.selectionStart, ta.selectionEnd, 'end'); } recompute(); };
+    const isDir = l => /\/\s*$/.test(l.replace(/\s+#.*$/, ''));
+
+    function addItem(kind) {
+      const v = ta.value, [s, e] = bounds(ta.selectionEnd), cur = v.slice(s, e), has = cur.trim().length > 0;
+      const indent = has ? ' '.repeat(TF.prefixLen(cur) + (isDir(cur) ? 4 : 0)) : '';
+      const nm = kind === 'folder' ? 'new-folder' : 'new-file.txt', text = indent + nm + (kind === 'folder' ? '/' : '');
+      const ins = (has ? '\n' : '') + text;
+      ta.value = v.slice(0, e) + ins + v.slice(e);
+      const a = e + (has ? 1 : 0) + indent.length; ta.focus(); ta.setSelectionRange(a, a + nm.length); recompute();
+    }
+    function shift(dir) {
+      const v = ta.value, a = bounds(ta.selectionStart)[0];
+      const endPos = ta.selectionEnd > ta.selectionStart && v[ta.selectionEnd - 1] === '\n' ? ta.selectionEnd - 1 : ta.selectionEnd;
+      const b = bounds(endPos)[1], old = v.slice(a, b);
+      const seg = old.split('\n').map(l => {
+        if (!l.trim()) return l;
+        l = l.replace(/\t/g, '    ');
+        return dir > 0 ? '    ' + l : (TF.prefixLen(l) >= 4 ? l.slice(4) : l.replace(/^ +/, ''));
+      }).join('\n');
+      const collapsed = ta.selectionStart === ta.selectionEnd, caret = Math.max(a, ta.selectionStart + seg.length - old.length);
+      ta.value = v.slice(0, a) + seg + v.slice(b);
+      ta.focus(); collapsed ? ta.setSelectionRange(caret, caret) : ta.setSelectionRange(a, a + seg.length); recompute();
+    }
+    function tidy() {
+      const p = TF.parseTree(ta.value);
+      if (!p.roots.length) return toast('Nothing to tidy yet', 'error');
+      ta.value = TF.toText(p.roots); recompute(); toast('Lines redrawn', 'success');
+    }
+    function clear() { ta.focus(); ta.select(); if (!document.execCommand || !document.execCommand('delete')) ta.value = ''; S.nameTouched = false; recompute(); }
+
+    const act = { folder: () => addItem('folder'), file: () => addItem('file'), in: () => shift(1), out: () => shift(-1), tidy, clear };
+    const tools = $('tools');
+    tools.addEventListener('mousedown', e => e.preventDefault()); // keep the keyboard open on phones
+    tools.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.ins) insert(b.dataset.ins); else if (act[b.dataset.t]) act[b.dataset.t]();
+    });
+    ta.addEventListener('keydown', e => {
+      if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); shift(e.shiftKey ? -1 : 1); }
+    });
+    // Enter keeps your indent (and goes one level deeper after a folder). beforeinput also works with phone keyboards.
+    ta.addEventListener('beforeinput', e => {
+      if (e.inputType !== 'insertLineBreak' && e.inputType !== 'insertParagraph') return;
+      if (ta.selectionStart !== ta.selectionEnd) return;
+      const [s, en] = bounds(ta.selectionStart);
+      const rest = ta.value.slice(ta.selectionStart, en);
+      if (rest !== '' && rest !== '/') return; // only when the caret is at the end of the line
+      const cur = ta.value.slice(s, en); if (!cur.trim()) return;
+      e.preventDefault(); if (rest) ta.setSelectionRange(en, en);
+      insert('\n' + ' '.repeat(TF.prefixLen(cur) + (isDir(cur) ? 4 : 0)));
+    });
+    $('warns').addEventListener('click', e => {
+      if (e.target.closest('#fixAll')) return fixAll();
+      const w = e.target.closest('[data-line]'); if (w) jumpTo(+w.dataset.line);
+    });
+    $('guideLink').onclick = () => $('helpDlg').showModal();
   }
 
   /* ---------- upload ---------- */
@@ -142,55 +232,98 @@
     finally { S.busy = false; $('zipBtn').disabled = !S.files.length; }
   }
 
-  /* ---------- GitHub ---------- */
+  /* ---------- GitHub: connection ---------- */
+  // The token is saved until GitHub itself rejects it (401). Network problems never log you out.
   function ghStatus() {
-    $('ghStatus').textContent = S.user ? `Connected as ${S.user.login}` : 'Not connected to GitHub.';
+    const c = $('conn');
+    c.innerHTML = S.user
+      ? `<span class="dot on"></span><span>Connected as <b>${esc(S.user.login)}</b></span><button type="button" class="link" id="disBtn">Disconnect</button><small>🔒 Saved on this device until it expires</small>`
+      : `<span class="dot"></span><span>Not connected</span><small>🔒 Your token stays on this device. Requests go straight to GitHub.</small>`;
     $('pushBtn').textContent = S.user ? 'Choose repo & push' : 'Connect & push';
-    $('disconnectBtn').hidden = !S.user;
   }
-  async function doConnect(token, silent) {
-    try {
-      const r = await TF.gh.connect(token);
-      S.token = token; S.user = r.user; store.set('treeforge_token', token);
-      S.repos = await TF.gh.listRepos(token);
-      ghStatus(); renderRepos();
-      if (!silent) { toast('Connected as ' + r.user.login, 'success'); if (r.warn) toast(r.warn, 'error'); }
-      return true;
-    } catch (e) {
-      if (silent) { store.set('treeforge_token', ''); return false; }
-      show($('connectErr'), e.message); return false;
-    }
+  function disconnect() {
+    S.token = ''; S.user = null; S.repos = []; S.repo = null; S.reposLoaded = false;
+    store.set(TOK, ''); store.set(USR, ''); ghStatus(); toast('Disconnected. Token removed from this device.');
   }
+  function expired() {
+    disconnect();
+    if ($('pushDlg').open) $('pushDlg').close();
+    show($('connectErr'), 'Your GitHub token expired or was revoked. Paste a new one to continue.');
+    $('connectDlg').showModal();
+  }
+  async function doConnect(token) {
+    const r = await TF.gh.connect(token);
+    S.token = token; S.user = { login: r.user.login };
+    store.set(TOK, token); store.set(USR, JSON.stringify(S.user));
+    try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (_) {}
+    S.repos = []; S.reposLoaded = false; ghStatus();
+    return r;
+  }
+
+  /* ---------- GitHub: repos ---------- */
   function renderRepos() {
     const q = $('repoSearch').value.toLowerCase();
     const list = S.repos.filter(r => r.full_name.toLowerCase().includes(q));
     $('repoList').innerHTML = list.length ? list.map(r =>
-      `<button class="repo${S.repo && S.repo.full_name === r.full_name ? ' on' : ''}" data-repo="${esc(r.full_name)}"><span>${esc(r.full_name)}${r.private ? ' 🔒' : ''}</span><small>${esc(r.default_branch || '')}</small></button>`).join('')
-      : '<div class="empty muted" style="padding:14px">No repos found. Try “New repo”.</div>';
+      `<button type="button" class="repo${S.repo && S.repo.full_name === r.full_name ? ' on' : ''}" data-repo="${esc(r.full_name)}"><span>${esc(r.full_name)}${r.private ? ' 🔒' : ''}</span><small>${esc(r.default_branch || '')}</small></button>`).join('')
+      : `<div class="empty muted pad">${S.loading ? 'Loading your repos...' : S.reposLoaded ? 'No repos found. Try “New repo”.' : ''}</div>`;
+  }
+  async function loadRepos() {
+    if (S.loading) return; S.loading = true; renderRepos();
+    try {
+      await TF.gh.listRepos(S.token, list => { S.repos = list; renderRepos(); });
+      S.reposLoaded = true;
+    } catch (e) {
+      S.loading = false;
+      if (e.status === 401) return expired();
+      $('repoList').innerHTML = `<div class="empty muted pad">Couldn't load repos (${esc(e.message)}). <button type="button" class="link" id="retryRepos">Retry</button></div>`;
+      return;
+    }
+    S.loading = false; autoPick();
   }
   function setTarget(t) {
     S.target = t;
     document.querySelectorAll('[data-target]').forEach(x => x.classList.toggle('on', x.dataset.target === t));
     $('existingBox').hidden = t !== 'existing'; $('newBox').hidden = t !== 'new';
+    $('repoNote').textContent = t === 'new' ? 'A fresh repo is created and filled automatically.' : 'Empty repo? No problem. It is detected and set up automatically.';
   }
   function autoPick() {
-    let last = null; try { last = JSON.parse(store.get('tf_last') || 'null'); } catch (_) {}
-    const name = projName().toLowerCase();
-    const r = (!S.repo && (S.repos.find(x => last && x.full_name === last.repo) || S.repos.find(x => x.name.toLowerCase() === name))) || S.repo;
-    if (r) { S.repo = r; $('branch').value = (last && last.repo === r.full_name && last.branch) || r.default_branch || 'main'; setTarget('existing'); }
-    else { setTarget('new'); $('branch').value = $('branch').value || 'main'; }
+    if (!S.repo && (S.repos.length || S.reposLoaded)) {
+      let last = null; try { last = JSON.parse(store.get('tf_last') || 'null'); } catch (_) {}
+      const name = projName().toLowerCase();
+      const r = S.repos.find(x => last && x.full_name === last.repo) || S.repos.find(x => x.name.toLowerCase() === name);
+      if (r) { S.repo = r; $('branch').value = (last && last.repo === r.full_name && last.branch) || r.default_branch || 'main'; setTarget('existing'); }
+      else { setTarget('new'); $('branch').value = $('branch').value || 'main'; }
+    }
     renderRepos();
   }
-  function openPush() {
-    if (!S.user) { show($('connectErr'), ''); $('connectDlg').showModal(); return; }
+  async function openPush() {
+    if (!S.token) { show($('connectErr'), ''); $('connectDlg').showModal(); return; }
     $('fileCount').textContent = TF.stripRoot(S.files).length + ' files';
     if (!$('newName').value) $('newName').value = projName();
-    show($('pushErr'), ''); show($('pushOk'), ''); $('step').textContent = ''; $('bar').hidden = true;
+    show($('pushErr'), ''); $('step').textContent = ''; $('bar').hidden = true; $('barFill').style.width = '0';
+    $('pushForm').hidden = false; $('pushDone').hidden = true;
     if (!S.msgTouched) $('commitMsg').value = `Add ${projName()} via TreeForge`;
     autoPick(); $('pushDlg').showModal();
+    if (!S.reposLoaded) loadRepos();
+  }
+
+  /* ---------- GitHub: push + success card ---------- */
+  function renderDone(r) {
+    const n = (v, w) => `${v} ${w}${v === 1 ? '' : 's'}`;
+    $('pushDone').innerHTML = `<div class="done">
+      <div class="tick"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h3>Pushed to GitHub</h3>
+      <p class="mono repo-id">${esc(r.repoName)} · ${esc(r.branch)}</p>
+      <div class="chips"><span>${n(r.files, 'file')}</span><span>${n(r.commits, 'commit')}</span><span class="mono">${esc(r.sha.slice(0, 7))}</span>${r.initialized ? '<span class="auto">empty repo set up automatically</span>' : ''}</div>
+      <a class="btn primary big" href="${esc(r.repoUrl)}" target="_blank" rel="noopener">Open repo</a>
+      <div class="grid2"><a class="btn" href="${esc(r.commitUrl)}" target="_blank" rel="noopener">View commit</a><button type="button" class="btn" data-copy="${esc(r.repoUrl)}">Copy link</button></div>
+      <button type="button" class="btn ghost" data-close>Done</button>
+    </div>`;
+    $('pushForm').hidden = true; $('pushDone').hidden = false;
   }
   async function doPush() {
-    show($('pushErr'), ''); show($('pushOk'), '');
+    show($('pushErr'), '');
     const isNew = S.target === 'new', newName = $('newName').value.trim().replace(/\s+/g, '-');
     if (isNew && !/^[\w.-]+$/.test(newName)) return show($('pushErr'), 'Repo names can only use letters, numbers, - _ and .');
     if (!isNew && !S.repo) return show($('pushErr'), 'Select a repo from the list first.');
@@ -202,14 +335,14 @@
         onStep: m => ($('step').textContent = m),
         onProgress: (c, t) => ($('barFill').style.width = (c / Math.max(1, t)) * 100 + '%')
       });
-      $('step').textContent = 'Done!';
-      $('pushOk').innerHTML = `<b>Pushed ✅</b><br><a href="${esc(r.repoUrl)}" target="_blank" rel="noopener">Open repo →</a><br><a href="${esc(r.commitUrl)}" target="_blank" rel="noopener">Commit ${esc(r.sha.slice(0, 7))} view →</a>`;
-      $('pushOk').hidden = false; toast('Pushed to GitHub. Repo link copied.', 'success');
-      try { navigator.clipboard.writeText(r.repoUrl); } catch (_) {}
-      store.set('tf_last', JSON.stringify({ repo: isNew ? r.repoUrl.split('github.com/')[1] : S.repo.full_name, branch: $('branch').value.trim() }));
-      if (isNew) TF.gh.listRepos(S.token).then(l => { S.repos = l; });
-    } catch (e) { show($('pushErr'), e.message || 'Push failed'); $('step').textContent = ''; }
-    finally { btn.disabled = false; }
+      renderDone(r);
+      try { navigator.clipboard.writeText(r.repoUrl).then(() => toast('Repo link copied', 'success'), () => {}); } catch (_) {}
+      store.set('tf_last', JSON.stringify({ repo: r.repoName, branch: r.branch }));
+      if (isNew) { S.repo = null; S.reposLoaded = false; }
+    } catch (e) {
+      if (e.status === 401) return expired();
+      show($('pushErr'), e.message || 'Push failed'); $('step').textContent = '';
+    } finally { btn.disabled = false; }
   }
 
   /* ---------- wiring ---------- */
@@ -223,6 +356,7 @@
     ['treeText', 'projName'].forEach(id => $(id).addEventListener('input', deb));
     ['gitkeep', 'starter'].forEach(id => $(id).addEventListener('change', recompute));
     $('filter').addEventListener('input', render);
+    setupEditor();
 
     function setMode(m) {
       S.mode = m;
@@ -267,19 +401,30 @@
     $('zipBtn').onclick = downloadZip;
     $('pushBtn').onclick = openPush;
     $('helpBtn').onclick = () => $('helpDlg').showModal();
-    document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => b.closest('dialog').close());
+    document.addEventListener('click', e => {
+      const c = e.target.closest('[data-close]'); if (c) { c.closest('dialog').close(); return; }
+      const cp = e.target.closest('[data-copy]');
+      if (cp) { try { navigator.clipboard.writeText(cp.dataset.copy).then(() => (cp.textContent = 'Copied ✓'), () => (cp.textContent = 'Copy failed')); } catch (_) { cp.textContent = 'Copy failed'; } return; }
+      if (e.target.closest('#retryRepos')) loadRepos();
+    });
     document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
 
     $('connectBtn').onclick = async () => {
       const tk = $('tokenInput').value.trim(); if (!tk) return show($('connectErr'), 'Enter a token.');
       $('connectBtn').disabled = true; show($('connectErr'), '');
-      const ok = await doConnect(tk); $('connectBtn').disabled = false;
-      if (ok) { $('tokenInput').value = ''; $('connectDlg').close(); openPush(); }
+      try {
+        const r = await doConnect(tk);
+        $('tokenInput').value = ''; $('connectDlg').close();
+        toast('Connected as ' + r.user.login, 'success'); if (r.warn) toast(r.warn, 'error');
+        openPush();
+      } catch (e) { show($('connectErr'), e.message || 'Could not connect'); }
+      $('connectBtn').disabled = false;
     };
-    $('disconnectBtn').onclick = () => {
-      S.token = ''; S.user = null; S.repos = []; S.repo = null; store.set('treeforge_token', '');
-      ghStatus(); $('connectDlg').close(); toast('Disconnected, token removed');
-    };
+    $('conn').addEventListener('click', e => {
+      const b = e.target.closest('#disBtn'); if (!b) return;
+      if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Tap again to confirm'; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = 'Disconnect'; } }, 3000); return; }
+      disconnect();
+    });
     document.querySelectorAll('[data-target]').forEach(b => b.onclick = () => setTarget(b.dataset.target));
     $('repoSearch').addEventListener('input', renderRepos);
     $('repoList').onclick = e => {
@@ -289,8 +434,10 @@
     };
     $('doPush').onclick = doPush;
 
+    // Restore the saved connection without any network call: nothing extra loads with the page.
+    const saved = store.get(TOK);
+    if (saved) { S.token = saved; try { S.user = JSON.parse(store.get(USR) || 'null'); } catch (_) {} if (!S.user) S.user = { login: 'GitHub' }; }
     recompute(); ghStatus();
-    const saved = store.get('treeforge_token'); if (saved) doConnect(saved, true);
   }
   init();
 })();

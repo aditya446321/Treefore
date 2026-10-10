@@ -42,7 +42,7 @@
     <h1>Your folder tree, <em>shipped</em> in one click.</h1>
     <p class="sub">Paste a tree or drop a folder. TreeForge builds every file, then gives you a ZIP or pushes it all to GitHub in a single commit.</p>
     <div class="cta"><button class="btn primary" id="ctaPaste">Paste a tree</button><button class="btn" id="ctaDrop">Drop a folder</button></div>
-    <ul class="autos"><li>Reads your clipboard</li><li>Names your project</li><li>Saves your draft</li><li>Picks the repo for you</li></ul>
+    <ul class="autos"><li>Reads your clipboard</li><li>Names your project</li><li>Saves your draft</li><li>Picks the repo for you</li><li>Sets up empty repos</li><li>Stays connected</li></ul>
   </div>
   <div class="forge" aria-hidden="true">
     <pre class="ft"><span style="--i:0">my-app/</span><span style="--i:1">├── <b class="o">src/</b></span><span style="--i:2">│   ├── <b class="l">App.jsx</b></span><span style="--i:3">│   └── <b class="l">main.jsx</b></span><span style="--i:4">├── <b class="c">package.json</b></span><span style="--i:5">└── <b class="c">README.md</b></span></pre>
@@ -66,7 +66,23 @@
 
     <div id="pasteBox">
       <label class="lbl" for="treeText">Tree text</label>
+      <div class="tools" id="tools" role="toolbar" aria-label="Tree helpers">
+        <button type="button" data-t="folder" title="Add a folder line">📁 Folder</button>
+        <button type="button" data-t="file" title="Add a file line">📄 File</button>
+        <button type="button" data-t="in" title="Put inside the folder above (Tab)">⇥ In</button>
+        <button type="button" data-t="out" title="Move one level out (Shift+Tab)">⇤ Out</button>
+        <i class="sep"></i>
+        <button type="button" data-ins="/" title="Folder marker">/</button>
+        <button type="button" data-ins="├── ">├──</button>
+        <button type="button" data-ins="└── ">└──</button>
+        <button type="button" data-ins="│   ">│</button>
+        <i class="sep"></i>
+        <button type="button" data-t="tidy" title="Redraw the lines neatly">✨ Tidy</button>
+        <button type="button" data-t="clear">Clear</button>
+      </div>
       <textarea id="treeText" class="field mono tree-ta" spellcheck="false" placeholder="my-app/&#10;├── src/&#10;│   └── main.js&#10;└── README.md"></textarea>
+      <div id="warns" class="warns" hidden></div>
+      <p class="hint">Folder = name ending with <code>/</code>. Indent to put things inside it. <button type="button" class="link" id="guideLink">Format guide</button></p>
       <div class="row">
         <label class="chk"><input type="checkbox" id="gitkeep" checked> Keep empty folders (<code>.gitkeep</code>)</label>
         <label class="chk"><input type="checkbox" id="starter" checked> Smart extras: README, .gitignore, starter text</label>
@@ -92,8 +108,7 @@
     <h2>2. Ship</h2>
     <button class="btn primary big" id="zipBtn" disabled>Download ZIP</button>
     <button class="btn big" id="pushBtn" disabled>Push to GitHub</button>
-    <p class="muted" id="ghStatus">Not connected to GitHub.</p>
-    <p class="muted small">Your token stays in this browser. Requests go straight to api.github.com.</p>
+    <div class="conn" id="conn"></div>
   </section>
 
   <section class="card preview">
@@ -101,7 +116,6 @@
     <input id="filter" class="field" placeholder="Filter files..." autocomplete="off">
     <div id="tree" class="treebox mono"></div>
     <div id="autoNote" class="autonote"></div>
-    <div id="warns" class="warns" hidden></div>
   </section>
 </main>
 
@@ -109,43 +123,63 @@
   <div class="dhead"><b>Connect GitHub</b><button class="x" data-close>✕</button></div>
   <p class="muted">A Personal Access Token is required (classic: <code>repo</code> scope; fine-grained: Contents → Read &amp; write). <a href="https://github.com/settings/tokens/new?scopes=repo&description=TreeForge" target="_blank" rel="noopener">Create a token →</a></p>
   <input id="tokenInput" class="field mono" type="password" placeholder="ghp_... ya github_pat_..." autocomplete="off">
-  <div class="row"><button class="btn primary" id="connectBtn">Connect</button><button class="btn danger" id="disconnectBtn" hidden>Disconnect</button></div>
+  <div class="row"><button class="btn primary" id="connectBtn">Connect</button></div>
   <div class="err" id="connectErr" hidden></div>
 </dialog>
 
 <dialog id="pushDlg">
-  <div class="dhead"><b>Push to GitHub</b><button class="x" data-close>✕</button></div>
-  <div class="tabs"><button class="tab on" data-target="existing">Existing repo</button><button class="tab" data-target="new">New repo</button></div>
-  <div id="existingBox">
-    <input id="repoSearch" class="field" placeholder="Search repos..." autocomplete="off">
-    <div id="repoList" class="repolist"></div>
+  <div class="dhead"><b>Push to GitHub</b><button class="x" data-close aria-label="Close">✕</button></div>
+  <div id="pushForm" class="stack">
+    <div class="tabs"><button class="tab on" data-target="existing">Existing repo</button><button class="tab" data-target="new">New repo</button></div>
+    <div id="existingBox">
+      <input id="repoSearch" class="field" placeholder="Search repos..." autocomplete="off">
+      <div id="repoList" class="repolist"></div>
+    </div>
+    <div id="newBox" hidden>
+      <label class="lbl" for="newName">Repo name</label>
+      <input id="newName" class="field mono" placeholder="my-project" autocomplete="off">
+      <label class="chk"><input type="checkbox" id="isPrivate" checked> Private repo</label>
+    </div>
+    <p class="note" id="repoNote">Empty repo? No problem. It is detected and set up automatically.</p>
+    <div class="grid2">
+      <div><label class="lbl" for="branch">Branch</label><input id="branch" class="field mono" placeholder="main" autocomplete="off"></div>
+      <div><label class="lbl">Files</label><div class="field mono" id="fileCount"></div></div>
+    </div>
+    <label class="lbl" for="commitMsg">Commit message</label>
+    <input id="commitMsg" class="field" value="Add project via TreeForge">
+    <div class="bar" id="bar" hidden><i id="barFill"></i></div>
+    <p class="muted" id="step"></p>
+    <div class="err" id="pushErr" hidden></div>
+    <button class="btn primary big" id="doPush">Push in one commit</button>
   </div>
-  <div id="newBox" hidden>
-    <label class="lbl" for="newName">Repo name</label>
-    <input id="newName" class="field mono" placeholder="my-project" autocomplete="off">
-    <label class="chk"><input type="checkbox" id="isPrivate" checked> Private repo</label>
-  </div>
-  <div class="grid2">
-    <div><label class="lbl" for="branch">Branch</label><input id="branch" class="field mono" placeholder="main" autocomplete="off"></div>
-    <div><label class="lbl">Files</label><div class="field mono" id="fileCount"></div></div>
-  </div>
-  <label class="lbl" for="commitMsg">Commit message</label>
-  <input id="commitMsg" class="field" value="Add project via TreeForge">
-  <div class="bar" id="bar" hidden><i id="barFill"></i></div>
-  <p class="muted" id="step"></p>
-  <div class="err" id="pushErr" hidden></div>
-  <div class="ok" id="pushOk" hidden></div>
-  <button class="btn primary big" id="doPush">Push in one commit</button>
+  <div id="pushDone" hidden></div>
 </dialog>
 
 <dialog id="helpDlg">
-  <div class="dhead"><b>How it works</b><button class="x" data-close>✕</button></div>
+  <div class="dhead"><b>How it works</b><button class="x" data-close aria-label="Close">✕</button></div>
   <ol class="help">
-    <li><b>Input:</b> paste <code>tree</code> output (├── └── │ or a plain indented list) or upload your folder.</li>
-    <li><b>Preview:</b> check the structure. A name ending in <code>/</code>, or with children, is a folder.</li>
+    <li><b>Input:</b> paste <code>tree</code> output, write your own with the helper buttons, or upload a folder.</li>
+    <li><b>Preview:</b> check the structure. A name ending in <code>/</code>, or with items under it, is a folder.</li>
     <li><b>ZIP:</b> download the whole structure in one click.</li>
-    <li><b>GitHub:</b> connect with a token, pick or create a repo, and everything is pushed in one commit. Empty repos work too.</li>
+    <li><b>GitHub:</b> connect once with a token. It stays saved until GitHub says it expired. Pick or create a repo and everything is pushed. Empty repos are set up automatically.</li>
   </ol>
+  <div class="dhead"><b>Writing a tree correctly</b></div>
+  <div class="guide">
+    <div><small>✅ Right</small><pre>my-app/
+├── src/
+│   └── main.js
+└── README.md</pre></div>
+    <div><small>✅ Also right (plain indent)</small><pre>my-app/
+    src/
+        main.js
+    README.md</pre></div>
+  </div>
+  <ul class="help tips">
+    <li>Folder: end the name with <code>/</code> (<code>src/</code>). File: no slash (<code>main.js</code>).</li>
+    <li>Items inside a folder go one level deeper. Use the same step every time (4 spaces, or Tab).</li>
+    <li>Not allowed in names: <code>: * ? " &lt; &gt; |</code>. Use <code>/</code>, never <code>\</code>, between folders.</li>
+    <li>Wrote something wrong? A yellow box shows the line and how to fix it. Tap it to jump there, or press Fix.</li>
+  </ul>
 </dialog>
 
 <div id="toasts"></div>
