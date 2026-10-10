@@ -1,3 +1,4 @@
 User-agent: *
 Allow: /
-Sitemap: https://YOUR-USERNAME.github.io/TreeForge/sitemap.xml
+
+Sitemap: https://treefore.vercel.app/sitemap.xml

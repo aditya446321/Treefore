@@ -1,0 +1,12 @@
+# TreeForge
+
+> TreeForge is a free, browser-based tool that turns a folder tree (pasted text or an uploaded folder) into a ZIP file or a GitHub commit. No sign-up. No backend: files and GitHub tokens stay in the user's browser.
+
+## Key facts
+- Input: output of the `tree` command, ASCII trees, bullet lists, plain indented lists, or an uploaded folder.
+- Output: a downloadable ZIP, or a push to a new or existing GitHub repository (empty repositories are set up automatically).
+- Helps fix invalid trees: highlights the exact line and explains how to correct it.
+- GitHub token: classic `repo` scope, or fine-grained Contents read and write. Stored locally in the browser only.
+
+## Pages
+- [TreeForge](https://treefore.vercel.app/): the tool, how it works, supported formats, privacy and FAQ.

@@ -9,25 +9,25 @@
   <meta name="robots" content="index,follow,max-image-preview:large">
   <meta name="author" content="TreeForge">
   <meta name="theme-color" content="#0a0b09">
-  <link rel="canonical" href="https://YOUR-USERNAME.github.io/TreeForge/">
+  <link rel="canonical" href="https://treefore.vercel.app/">
   <title>TreeForge — Turn a folder tree into a ZIP or GitHub repo</title>
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="TreeForge">
   <meta property="og:title" content="TreeForge — Turn a folder tree into a ZIP or GitHub repo">
   <meta property="og:description" content="Paste a tree or drop a folder. Download a ZIP or push everything to GitHub in one commit. Works on your phone.">
-  <meta property="og:url" content="https://YOUR-USERNAME.github.io/TreeForge/">
-  <meta property="og:image" content="https://YOUR-USERNAME.github.io/TreeForge/assets/og-image.png">
+  <meta property="og:url" content="https://treefore.vercel.app/">
+  <meta property="og:image" content="https://treefore.vercel.app/assets/og-image.png">
   <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
   <meta property="og:image:alt" content="TreeForge: folder tree to ZIP or GitHub">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="TreeForge — Turn a folder tree into a ZIP or GitHub repo">
   <meta name="twitter:description" content="Paste a tree or drop a folder. ZIP it or push it to GitHub in one commit.">
-  <meta name="twitter:image" content="https://YOUR-USERNAME.github.io/TreeForge/assets/og-image.png">
+  <meta name="twitter:image" content="https://treefore.vercel.app/assets/og-image.png">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"TreeForge","applicationCategory":"DeveloperApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Convert a folder tree or uploaded folder into a ZIP or a single GitHub commit."}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"TreeForge","url":"https://treefore.vercel.app/","inLanguage":"en"},{"@type":"WebApplication","name":"TreeForge","url":"https://treefore.vercel.app/","applicationCategory":"DeveloperApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","inLanguage":"en","description":"Convert a folder tree or uploaded folder into a ZIP file or a GitHub commit, right in your browser.","featureList":["Paste or write a folder tree","Upload a folder","Download as ZIP","Push to GitHub in one commit","Automatic setup of empty repositories","Friendly error hints for invalid trees"],"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is TreeForge free?","acceptedAnswer":{"@type":"Answer","text":"Yes. TreeForge is free, needs no sign-up and has no usage limits. Everything runs in your browser."}},{"@type":"Question","name":"Are my files or my GitHub token sent to your server?","acceptedAnswer":{"@type":"Answer","text":"No. TreeForge has no backend. Files are built in your browser. When you push, requests go directly from your browser to api.github.com. Your token is stored only on your own device and stays there until GitHub rejects it or you disconnect."}},{"@type":"Question","name":"What permissions does the GitHub token need?","acceptedAnswer":{"@type":"Answer","text":"For a classic token, the repo scope. For a fine-grained token, Contents with Read and write access to the repository you want to push to."}},{"@type":"Question","name":"Can I push to an empty repository?","acceptedAnswer":{"@type":"Answer","text":"Yes. An empty repository is detected automatically and set up for you. Because GitHub needs a first commit before bulk uploads work, an empty repo receives two commits: the first file, then the rest."}},{"@type":"Question","name":"Which tree formats can I paste?","acceptedAnswer":{"@type":"Answer","text":"Output of the tree command (├── └── │), ASCII trees (+-- and |--), bullet lists, and plain indented lists with 2, 3 or 4 spaces. End a name with / to mark a folder."}},{"@type":"Question","name":"Is there a file size limit?","acceptedAnswer":{"@type":"Answer","text":"When you upload a folder, files over 100 MB are skipped. .git, node_modules and .DS_Store are ignored automatically. GitHub's own limits also apply to pushes."}}]}]}</script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -43,7 +43,7 @@
     <div class="cta"><button class="btn primary" id="ctaPaste">Paste a tree</button><button class="btn" id="ctaDrop">Drop a folder</button></div>
   </div>
   <div class="forge" aria-hidden="true">
-    <pre class="ft"><span style="--i:0">my-app/</span><span style="--i:1">├── <b class="o">src/</b></span><span style="--i:2">│   ├── <b class="l">App.jsx</b></span><span style="--i:3">│   └── <b class="l">main.jsx</b></span><span style="--i:4">├── <b class="c">package.json</b></span><span style="--i:5">└── <b class="c">README.md</b></span></pre>
+    <pre class="ft"><span>my-app/</span><span>├── <b class="o">src/</b></span><span>│   ├── <b class="l">App.jsx</b></span><span>│   └── <b class="l">main.jsx</b></span><span>├── <b class="c">package.json</b></span><span>└── <b class="c">README.md</b></span></pre>
     <div class="belt"><i></i><i></i><i></i></div>
     <div class="outs"><div class="out"><em class="d1"></em>my-app.zip<b>✓</b></div><div class="out"><em class="d2"></em>GitHub · 1 push<b>✓</b></div></div>
   </div>
@@ -115,6 +115,61 @@
     <div id="autoNote" class="autonote"></div>
   </section>
 </main>
+
+<section class="info" aria-label="About TreeForge">
+  <article id="what">
+    <h2>What TreeForge does</h2>
+    <p>TreeForge turns a folder tree into real files. Paste the output of the <code>tree</code> command, write your own structure with the helper buttons, or drop in an existing folder. You get a preview of every folder and file, then you can download everything as a ZIP or push it to a GitHub repository in a single flow.</p>
+    <p>It is made for scaffolding a new project from a plan, copying a structure that someone shared in a README or chat, and uploading a folder to GitHub from a phone where Git is not available.</p>
+  </article>
+  <article id="how">
+    <h2>How it works</h2>
+    <ol>
+      <li><b>Add your tree.</b> Paste it, type it, or upload a folder. Mistakes are highlighted with a plain explanation of how to fix them.</li>
+      <li><b>Check the preview.</b> Folders and files are listed with counts. Empty folders can keep a <code>.gitkeep</code>, and a README and <code>.gitignore</code> can be added for you.</li>
+      <li><b>Ship it.</b> Download a ZIP, or connect GitHub once, choose a repository or create a new one, and push.</li>
+    </ol>
+  </article>
+  <article id="formats">
+    <h2>Supported tree formats</h2>
+    <p>Folders end with <code>/</code>, files do not, and anything indented under a folder belongs inside it. Both of these produce the same result:</p>
+    <div class="guide">
+      <pre>my-app/
+├── src/
+│   └── main.js
+└── README.md</pre>
+      <pre>my-app/
+    src/
+        main.js
+    README.md</pre>
+    </div>
+    <p>File names cannot contain <code>: * ? " &lt; &gt; |</code>. Use <code>/</code>, not a backslash, between folders.</p>
+  </article>
+  <article id="privacy">
+    <h2>Privacy</h2>
+    <p>TreeForge runs entirely in your browser and has no server of its own. Your tree, your files and your GitHub token are never sent to us. A token is kept in your browser's local storage so you stay connected, and you can disconnect at any time from the account button in the header.</p>
+  </article>
+  <article id="faq">
+    <h2>Frequently asked questions</h2>
+    <h3>Is TreeForge free?</h3>
+    <p>Yes. TreeForge is free, needs no sign-up and has no usage limits. Everything runs in your browser.</p>
+    <h3>Are my files or my GitHub token sent to your server?</h3>
+    <p>No. TreeForge has no backend. Files are built in your browser. When you push, requests go directly from your browser to api.github.com. Your token is stored only on your own device and stays there until GitHub rejects it or you disconnect.</p>
+    <h3>What permissions does the GitHub token need?</h3>
+    <p>For a classic token, the repo scope. For a fine-grained token, Contents with Read and write access to the repository you want to push to.</p>
+    <h3>Can I push to an empty repository?</h3>
+    <p>Yes. An empty repository is detected automatically and set up for you. Because GitHub needs a first commit before bulk uploads work, an empty repo receives two commits: the first file, then the rest.</p>
+    <h3>Which tree formats can I paste?</h3>
+    <p>Output of the tree command (├── └── │), ASCII trees (+-- and |--), bullet lists, and plain indented lists with 2, 3 or 4 spaces. End a name with / to mark a folder.</p>
+    <h3>Is there a file size limit?</h3>
+    <p>When you upload a folder, files over 100 MB are skipped. .git, node_modules and .DS_Store are ignored automatically. GitHub's own limits also apply to pushes.</p>
+  </article>
+</section>
+
+<footer class="foot">
+  <nav aria-label="Page sections"><a href="#app">Tool</a><a href="#what">About</a><a href="#how">How it works</a><a href="#formats">Formats</a><a href="#privacy">Privacy</a><a href="#faq">FAQ</a></nav>
+  <p>TreeForge · free folder tree to ZIP or GitHub</p>
+</footer>
 
 <dialog id="connectDlg">
   <div class="dhead"><b>Connect GitHub</b><button class="x" data-close>✕</button></div>
@@ -189,9 +244,9 @@
 
 <div id="toasts"></div>
 
-<script src="js/parser.js"></script>
-<script src="js/zip.js"></script>
-<script src="js/github.js"></script>
-<script src="js/app.js"></script>
+<script src="js/parser.js" defer></script>
+<script src="js/zip.js" defer></script>
+<script src="js/github.js" defer></script>
+<script src="js/app.js" defer></script>
 </body>
 </html>
