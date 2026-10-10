@@ -13,7 +13,7 @@
       const dir = name.endsWith('/');
       name = name.replace(/\/+$/, '').trim();
       if (!name) return;
-      if (BAD.test(name) || name === '.' || name === '..') { warnings.push(`Line ${i + 1}: "${name}" skip kiya (invalid naam)`); return; }
+      if (BAD.test(name) || name === '.' || name === '..') { warnings.push(`Line ${i + 1}: "${name}" skipped (invalid name)`); return; }
       rows.push({ name, dir, L });
     });
     const pos = [...new Set(rows.map(r => r.L).filter(l => l > 0))].sort((a, b) => a - b);
@@ -30,7 +30,7 @@
       const dup = list.find(n => n.name === node.name);
       if (dup) {
         if (dup.type === 'folder' && node.type === 'folder') { stack.push({ node: dup, depth: r.depth }); continue; }
-        warnings.push(`Duplicate "${node.name}" skip kiya`); continue;
+        warnings.push(`Duplicate "${node.name}" skipped`); continue;
       }
       list.push(node);
       stack.push({ node, depth: r.depth });

@@ -4,17 +4,46 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="google-site-verification" content="9E6AMmn4IhA1akm4SMojNbmeibEWR3238oomr6mvyvk" />
-  <meta name="description" content="TreeForge: folder tree paste karo ya folder upload karo, phir ZIP download karo ya ek hi commit mein GitHub par push karo.">
-  <meta name="theme-color" content="#0b0d0a">
-  <title>TreeForge — Tree se ZIP aur GitHub push</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0d0a'/%3E%3Cpath d='M16 6v20M16 12l7-4M16 18l-7-4M16 24l7-4' stroke='%23c6ff00' stroke-width='2.4' stroke-linecap='round' fill='none'/%3E%3C/svg%3E">
+  <meta name="description" content="TreeForge turns a pasted folder tree or an uploaded folder into a ZIP or a single GitHub commit. Free, runs in your browser, no sign-up.">
+  <meta name="keywords" content="folder tree to zip, tree to github, project scaffold, upload folder to github, github push from phone, ascii tree parser">
+  <meta name="robots" content="index,follow,max-image-preview:large">
+  <meta name="author" content="TreeForge">
+  <meta name="theme-color" content="#0a0b09">
+  <link rel="canonical" href="https://YOUR-USERNAME.github.io/TreeForge/">
+  <title>TreeForge — Turn a folder tree into a ZIP or GitHub repo</title>
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="TreeForge">
+  <meta property="og:title" content="TreeForge — Turn a folder tree into a ZIP or GitHub repo">
+  <meta property="og:description" content="Paste a tree or drop a folder. Download a ZIP or push everything to GitHub in one commit. Works on your phone.">
+  <meta property="og:url" content="https://YOUR-USERNAME.github.io/TreeForge/">
+  <meta property="og:image" content="https://YOUR-USERNAME.github.io/TreeForge/assets/og-image.png">
+  <meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="TreeForge: folder tree to ZIP or GitHub">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="TreeForge — Turn a folder tree into a ZIP or GitHub repo">
+  <meta name="twitter:description" content="Paste a tree or drop a folder. ZIP it or push it to GitHub in one commit.">
+  <meta name="twitter:image" content="https://YOUR-USERNAME.github.io/TreeForge/assets/og-image.png">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"TreeForge","applicationCategory":"DeveloperApplication","operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Convert a folder tree or uploaded folder into a ZIP or a single GitHub commit."}</script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <header class="top">
-  <div class="brand"><span class="logo">⌥</span><b>TreeForge</b></div>
-  <button class="btn ghost sm" id="helpBtn">Help</button>
+  <a class="brand" href="./"><img src="assets/favicon.svg" alt="" width="30" height="30"><b>TreeForge</b></a>
+  <button class="btn ghost sm" id="helpBtn">How it works</button>
 </header>
+
+<section class="hero">
+  <p class="eyebrow">Folder → ZIP → GitHub</p>
+  <h1>Turn a folder tree into a <em>real project</em>.</h1>
+  <p class="sub">Paste an ASCII tree or drop a folder. Download a ZIP, or push every file to GitHub in a single commit — even from your phone.</p>
+  <div class="steps"><span>1 · Paste or drop</span><span>2 · Preview</span><span>3 · ZIP or push</span></div>
+</section>
+
+<noscript><p class="wrap">TreeForge needs JavaScript to run.</p></noscript>
 
 <main class="wrap">
   <section class="card input">
@@ -30,23 +59,23 @@
       <label class="lbl" for="treeText">Tree text</label>
       <textarea id="treeText" class="field mono tree-ta" spellcheck="false" placeholder="my-app/&#10;├── src/&#10;│   └── main.js&#10;└── README.md"></textarea>
       <div class="row">
-        <label class="chk"><input type="checkbox" id="gitkeep" checked> Khaali folder mein <code>.gitkeep</code></label>
-        <label class="chk"><input type="checkbox" id="starter"> README / package.json mein starter text</label>
+        <label class="chk"><input type="checkbox" id="gitkeep" checked> Add <code>.gitkeep</code> to empty folders</label>
+        <label class="chk"><input type="checkbox" id="starter"> Starter text in README / package.json</label>
       </div>
     </div>
 
     <div id="uploadBox" hidden>
       <div class="drop" id="drop">
-        <p>Folder yahan drop karo</p>
+        <div class="dz-icon" aria-hidden="true"><svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14a4 4 0 0 1 4-4h9l4 5h15a4 4 0 0 1 4 4v15a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4z"/><path d="M24 33V21m-5 5 5-5 5 5"/></svg></div><p class="dz-title">Drop a folder here</p><p class="dz-sub">or pick one below</p>
         <div class="row center">
           <button class="btn" id="pickFolder">Choose folder</button>
           <button class="btn ghost" id="pickFiles">Choose files</button>
         </div>
-        <small>Phone par folder picker na chale to “Choose files” se files select karo. <code>.git</code>, <code>node_modules</code>, <code>.DS_Store</code> apne aap skip hote hain.</small>
+        <small>No folder picker on your phone? Use “Choose files”. <code>.git</code>, <code>node_modules</code> and <code>.DS_Store</code> are skipped automatically.</small>
       </div>
       <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
       <input type="file" id="filesInput" multiple hidden>
-      <div id="uploadInfo" class="muted"></div>
+      <div id="uploadInfo" class="upinfo" hidden></div>
     </div>
   </section>
 
@@ -54,8 +83,8 @@
     <h2>2. Ship</h2>
     <button class="btn primary big" id="zipBtn" disabled>Download ZIP</button>
     <button class="btn big" id="pushBtn" disabled>Push to GitHub</button>
-    <p class="muted" id="ghStatus">GitHub connected nahi hai.</p>
-    <p class="muted small">Token sirf tumhare browser mein rehta hai. Calls seedha api.github.com par jaati hain.</p>
+    <p class="muted" id="ghStatus">Not connected to GitHub.</p>
+    <p class="muted small">Your token stays in this browser. Requests go straight to api.github.com.</p>
   </section>
 
   <section class="card preview">
@@ -68,7 +97,7 @@
 
 <dialog id="connectDlg">
   <div class="dhead"><b>Connect GitHub</b><button class="x" data-close>✕</button></div>
-  <p class="muted">Personal Access Token chahiye (classic: <code>repo</code> scope; fine-grained: Contents → Read &amp; write). <a href="https://github.com/settings/tokens/new?scopes=repo&description=TreeForge" target="_blank" rel="noopener">Token banao →</a></p>
+  <p class="muted">A Personal Access Token is required (classic: <code>repo</code> scope; fine-grained: Contents → Read &amp; write). <a href="https://github.com/settings/tokens/new?scopes=repo&description=TreeForge" target="_blank" rel="noopener">Create a token →</a></p>
   <input id="tokenInput" class="field mono" type="password" placeholder="ghp_... ya github_pat_..." autocomplete="off">
   <div class="row"><button class="btn primary" id="connectBtn">Connect</button><button class="btn danger" id="disconnectBtn" hidden>Disconnect</button></div>
   <div class="err" id="connectErr" hidden></div>
@@ -78,7 +107,7 @@
   <div class="dhead"><b>Push to GitHub</b><button class="x" data-close>✕</button></div>
   <div class="tabs"><button class="tab on" data-target="existing">Existing repo</button><button class="tab" data-target="new">New repo</button></div>
   <div id="existingBox">
-    <input id="repoSearch" class="field" placeholder="Repo search..." autocomplete="off">
+    <input id="repoSearch" class="field" placeholder="Search repos..." autocomplete="off">
     <div id="repoList" class="repolist"></div>
   </div>
   <div id="newBox" hidden>
@@ -100,12 +129,12 @@
 </dialog>
 
 <dialog id="helpDlg">
-  <div class="dhead"><b>Kaise use karein</b><button class="x" data-close>✕</button></div>
+  <div class="dhead"><b>How it works</b><button class="x" data-close>✕</button></div>
   <ol class="help">
-    <li><b>Input:</b> <code>tree</code> ka output paste karo (├── └── │ sab chalega, indent wali list bhi) ya apna folder upload karo.</li>
-    <li><b>Preview:</b> check karo ki structure sahi hai. Naam ke aage <code>/</code> ho ya usme children hon to wo folder hai.</li>
-    <li><b>ZIP:</b> ek click mein poora structure download.</li>
-    <li><b>GitHub:</b> token se connect karo, repo chuno ya naya banao, aur poora folder ek hi commit mein push ho jaata hai. Khaali repo bhi chalega.</li>
+    <li><b>Input:</b> paste <code>tree</code> output (├── └── │ or a plain indented list) or upload your folder.</li>
+    <li><b>Preview:</b> check the structure. A name ending in <code>/</code>, or with children, is a folder.</li>
+    <li><b>ZIP:</b> download the whole structure in one click.</li>
+    <li><b>GitHub:</b> connect with a token, pick or create a repo, and everything is pushed in one commit. Empty repos work too.</li>
   </ol>
 </dialog>
 

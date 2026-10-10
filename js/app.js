@@ -1,6 +1,14 @@
 (function () {
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const CATS = {
+    code: 'js jsx ts tsx py kt java go rs c cpp h cs php rb swift sh gradle kts dart lua',
+    web: 'html htm css scss sass vue svelte xml',
+    data: 'json yml yaml toml md txt csv lock env gitignore ini conf',
+    media: 'png jpg jpeg gif webp svg ico mp3 mp4 wav mov pdf ttf otf woff woff2'
+  };
+  const EXT = {}; Object.entries(CATS).forEach(([c, l]) => l.split(' ').forEach(e => (EXT[e] = c)));
+  const cat = n => EXT[(n.includes('.') ? n.split('.').pop() : '').toLowerCase()] || 'other';
   const SKIP = /(^|\/)(\.git|node_modules|\.DS_Store)(\/|$)/;
   const SAMPLE = `my-app/
 ├── src/
@@ -48,13 +56,13 @@
     }).filter(Boolean);
   }
   function nodeHtml(n, open) {
-    if (n.type !== 'folder') return `<div class="f">${esc(n.name)}</div>`;
+    if (n.type !== 'folder') return `<div class="f" data-c="${cat(n.name)}">${esc(n.name)}</div>`;
     return `<details${open ? ' open' : ''}><summary>${esc(n.name)}/</summary>${n.children.map(c => nodeHtml(c, open)).join('')}</details>`;
   }
   function render() {
     const q = $('filter').value.trim().toLowerCase();
     const nodes = filterNodes(S.roots, q);
-    $('tree').innerHTML = nodes.length ? nodes.map(n => nodeHtml(n, true)).join('') : `<div class="empty">${S.roots.length ? 'Kuch match nahi hua.' : 'Abhi kuch nahi hai. Tree paste karo ya folder upload karo.'}</div>`;
+    $('tree').innerHTML = nodes.length ? nodes.map(n => nodeHtml(n, true)).join('') : `<div class="empty">${S.roots.length ? 'No matches.' : 'Nothing here yet. Paste a tree or upload a folder.'}</div>`;
     const c = TF.count(S.roots);
     $('counts').textContent = `${c.folders} folders · ${S.files.length} files`;
     show($('warns'), S.warns.join('\n')); $('warns').style.whiteSpace = 'pre-line';
@@ -68,13 +76,25 @@
     for (const f of list) {
       const path = (f._path || f.webkitRelativePath || f.name).replace(/^\/+/, '');
       if (SKIP.test(path)) { skipped++; continue; }
-      if (f.size > 100 * 1024 * 1024) { toast(`${f.name} 100MB se badi hai, skip ki`, 'error'); continue; }
+      if (f.size > 100 * 1024 * 1024) { toast(`${f.name} is over 100 MB and was skipped`, 'error'); continue; }
       items.push({ path, file: f, size: f.size });
     }
     S.upload = items;
-    const total = items.reduce((s, i) => s + i.size, 0);
-    $('uploadInfo').textContent = items.length ? `${items.length} files · ${(total / 1048576).toFixed(2)} MB${skipped ? ` · ${skipped} skip (git/node_modules)` : ''}` : '';
+    renderStats(items, skipped);
     recompute();
+  }
+  function renderStats(items, skipped) {
+    const box = $('uploadInfo'); box.hidden = !items.length; if (!items.length) return;
+    const total = items.reduce((a, i) => a + i.size, 0), by = {};
+    items.forEach(i => { const c = cat(i.path.split('/').pop()); by[c] = (by[c] || 0) + 1; });
+    const names = { code: 'Code', web: 'Web', data: 'Config & docs', media: 'Media', other: 'Other' };
+    const keys = Object.keys(names).filter(k => by[k]);
+    const size = total > 1048576 ? (total / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(total / 1024)) + ' KB';
+    box.innerHTML = `<div class="stats"><div class="stat"><b id="cnt">0</b><span>files</span></div><div class="stat"><b>${size}</b><span>total</span></div><div class="stat"><b>${TF.count(TF.fromPaths(items.map(i => i.path))).folders}</b><span>folders</span></div></div>
+      <div class="mix">${keys.map(k => `<i class="cd-${k}" style="flex:${by[k]}" title="${names[k]}"></i>`).join('')}</div>
+      <div class="legend">${keys.map(k => `<span class="cd-${k}">${names[k]} · ${by[k]}</span>`).join('')}${skipped ? `<span>${skipped} skipped</span>` : ''}</div>`;
+    const el = $('cnt'), t0 = performance.now();
+    (function tick(t) { const p = Math.min(1, (t - t0) / 700); el.textContent = Math.round(items.length * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(tick); })(t0);
   }
   async function readEntry(entry, base = '') {
     if (entry.isFile) return new Promise(res => entry.file(f => { f._path = base + f.name; res([f]); }, () => res([])));
@@ -97,14 +117,14 @@
       const blob = await TF.makeZip(entries);
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name + '.zip';
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
-      toast(`${name}.zip download ho gaya`, 'success');
-    } catch (e) { toast(e.message || 'ZIP fail ho gaya', 'error'); }
+      toast(`${name}.zip downloaded`, 'success');
+    } catch (e) { toast(e.message || 'ZIP failed', 'error'); }
     finally { S.busy = false; $('zipBtn').disabled = !S.files.length; }
   }
 
   /* ---------- GitHub ---------- */
   function ghStatus() {
-    $('ghStatus').textContent = S.user ? `Connected: ${S.user.login}` : 'GitHub connected nahi hai.';
+    $('ghStatus').textContent = S.user ? `Connected as ${S.user.login}` : 'Not connected to GitHub.';
     $('pushBtn').textContent = S.user ? 'Choose repo & push' : 'Connect & push';
     $('disconnectBtn').hidden = !S.user;
   }
@@ -126,7 +146,7 @@
     const list = S.repos.filter(r => r.full_name.toLowerCase().includes(q));
     $('repoList').innerHTML = list.length ? list.map(r =>
       `<button class="repo${S.repo && S.repo.full_name === r.full_name ? ' on' : ''}" data-repo="${esc(r.full_name)}"><span>${esc(r.full_name)}${r.private ? ' 🔒' : ''}</span><small>${esc(r.default_branch || '')}</small></button>`).join('')
-      : '<div class="empty muted" style="padding:14px">Koi repo nahi mila. “New repo” try karo.</div>';
+      : '<div class="empty muted" style="padding:14px">No repos found. Try “New repo”.</div>';
   }
   function openPush() {
     if (!S.user) { show($('connectErr'), ''); $('connectDlg').showModal(); return; }
@@ -138,8 +158,8 @@
   async function doPush() {
     show($('pushErr'), ''); show($('pushOk'), '');
     const isNew = S.target === 'new', newName = $('newName').value.trim().replace(/\s+/g, '-');
-    if (isNew && !/^[\w.-]+$/.test(newName)) return show($('pushErr'), 'Repo name mein sirf letters, numbers, - _ . allowed hain.');
-    if (!isNew && !S.repo) return show($('pushErr'), 'Pehle list se repo chuno.');
+    if (isNew && !/^[\w.-]+$/.test(newName)) return show($('pushErr'), 'Repo names can only use letters, numbers, - _ and .');
+    if (!isNew && !S.repo) return show($('pushErr'), 'Select a repo from the list first.');
     const btn = $('doPush'); btn.disabled = true; $('bar').hidden = false;
     try {
       const r = await TF.gh.push({
@@ -148,11 +168,11 @@
         onStep: m => ($('step').textContent = m),
         onProgress: (c, t) => ($('barFill').style.width = (c / Math.max(1, t)) * 100 + '%')
       });
-      $('step').textContent = 'Ho gaya!';
-      $('pushOk').innerHTML = `<b>Push ho gaya ✅</b><br><a href="${esc(r.repoUrl)}" target="_blank" rel="noopener">Repo kholo →</a><br><a href="${esc(r.commitUrl)}" target="_blank" rel="noopener">Commit ${esc(r.sha.slice(0, 7))} dekho →</a>`;
-      $('pushOk').hidden = false; toast('GitHub par push ho gaya', 'success');
+      $('step').textContent = 'Done!';
+      $('pushOk').innerHTML = `<b>Pushed ✅</b><br><a href="${esc(r.repoUrl)}" target="_blank" rel="noopener">Open repo →</a><br><a href="${esc(r.commitUrl)}" target="_blank" rel="noopener">Commit ${esc(r.sha.slice(0, 7))} view →</a>`;
+      $('pushOk').hidden = false; toast('Pushed to GitHub', 'success');
       if (isNew) TF.gh.listRepos(S.token).then(l => { S.repos = l; });
-    } catch (e) { show($('pushErr'), e.message || 'Push fail'); $('step').textContent = ''; }
+    } catch (e) { show($('pushErr'), e.message || 'Push failed'); $('step').textContent = ''; }
     finally { btn.disabled = false; }
   }
 
@@ -177,10 +197,11 @@
     drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
     drop.ondragleave = () => drop.classList.remove('over');
     drop.ondrop = async e => {
-      e.preventDefault(); drop.classList.remove('over');
+      e.preventDefault(); drop.classList.remove('over'); drop.classList.add('busy');
       const items = [...(e.dataTransfer.items || [])].map(i => i.webkitGetAsEntry && i.webkitGetAsEntry()).filter(Boolean);
       if (items.length) setUpload((await Promise.all(items.map(i => readEntry(i)))).flat());
       else setUpload([...e.dataTransfer.files]);
+      setTimeout(() => drop.classList.remove('busy'), 500);
     };
 
     $('zipBtn').onclick = downloadZip;
@@ -190,14 +211,14 @@
     document.querySelectorAll('dialog').forEach(d => d.addEventListener('click', e => { if (e.target === d) d.close(); }));
 
     $('connectBtn').onclick = async () => {
-      const tk = $('tokenInput').value.trim(); if (!tk) return show($('connectErr'), 'Token daalo.');
+      const tk = $('tokenInput').value.trim(); if (!tk) return show($('connectErr'), 'Enter a token.');
       $('connectBtn').disabled = true; show($('connectErr'), '');
       const ok = await doConnect(tk); $('connectBtn').disabled = false;
       if (ok) { $('tokenInput').value = ''; $('connectDlg').close(); openPush(); }
     };
     $('disconnectBtn').onclick = () => {
       S.token = ''; S.user = null; S.repos = []; S.repo = null; store.set('treeforge_token', '');
-      ghStatus(); $('connectDlg').close(); toast('Disconnect ho gaya, token hata diya');
+      ghStatus(); $('connectDlg').close(); toast('Disconnected, token removed');
     };
     document.querySelectorAll('[data-target]').forEach(b => b.onclick = () => {
       S.target = b.dataset.target;

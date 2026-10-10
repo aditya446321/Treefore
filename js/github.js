@@ -1,11 +1,11 @@
-/* GitHub push: blobs -> tree -> commit -> ref (khaali repo bhi handle hota hai) */
+/* GitHub push: blobs -> tree -> commit -> ref (handles empty repos) */
 (function (g) {
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const MSG = {
-    401: 'Token galat ya expire ho gaya. Naya token banao.',
-    403: 'Permission nahi mili ya rate limit lag gayi. Token mein "repo" scope (ya Contents: Read & write) do.',
-    404: 'Repo nahi mila ya token ko us repo ka access nahi hai.',
-    422: 'GitHub ne request reject ki (naam pehle se hai ya branch protected ho sakti hai).'
+    401: 'Bad or expired token. Create a new one.',
+    403: 'Permission denied or rate limited. Give the token the "repo" scope (or Contents: Read & write).',
+    404: 'Repo not found, or the token has no access to it.',
+    422: 'GitHub rejected the request (name taken or branch protected).'
   };
 
   async function api(token, path, opt = {}) {
@@ -16,7 +16,7 @@
         res = await fetch(url, { ...opt, headers: {
           Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28',
           Authorization: 'Bearer ' + token, ...(opt.body ? { 'Content-Type': 'application/json' } : {}) } });
-      } catch (e) { throw new Error('Network error — internet check karo.'); }
+      } catch (e) { throw new Error('Network error. Check your connection.'); }
       const data = await res.json().catch(() => ({}));
       const limited = (res.status === 403 || res.status === 429) && /rate limit|abuse|secondary/i.test(data.message || '');
       if (limited && i < 3) { await sleep(Math.min(+res.headers.get('retry-after') || 5 * (i + 1), 60) * 1000); continue; }
@@ -27,9 +27,9 @@
 
   async function connect(token) {
     const r = await api(token, '/user');
-    if (!r.res.ok) throw new Error(r.res.status === 401 ? MSG[401] : r.data.message || 'Connect nahi hua');
+    if (!r.res.ok) throw new Error(r.res.status === 401 ? MSG[401] : r.data.message || 'Could not connect');
     const scopes = r.res.headers.get('x-oauth-scopes');
-    return { user: r.data, warn: scopes !== null && !/(^|,\s*)(repo|public_repo)(,|$)/.test(scopes) ? 'Is token mein "repo" scope nahi dikh raha — push fail ho sakta hai.' : '' };
+    return { user: r.data, warn: scopes !== null && !/(^|,\s*)(repo|public_repo)(,|$)/.test(scopes) ? 'This token seems to lack the "repo" scope. Pushing may fail.' : '' };
   }
 
   async function listRepos(token) {
@@ -48,13 +48,13 @@
   async function push(o) { // {token, repo|null, newName, isPrivate, branch, message, files, onStep, onProgress}
     const { token, files, onStep, onProgress } = o;
     let repo = o.repo;
-    if (!files.length) throw new Error('Push ke liye koi file nahi hai.');
+    if (!files.length) throw new Error('No files to push.');
     if (!repo) {
-      onStep(`Repo "${o.newName}" ban raha hai...`);
+      onStep(`Creating repo "${o.newName}"...`);
       const r = await api(token, '/user/repos', { method: 'POST', body: JSON.stringify({ name: o.newName, private: o.isPrivate, auto_init: false }) });
       if (!r.res.ok) {
-        if (r.res.status === 422) throw new Error('Is naam ka repo pehle se hai. Dusra naam chuno.');
-        fail(r, 'Repo nahi bana');
+        if (r.res.status === 422) throw new Error('A repo with this name already exists. Pick another name.');
+        fail(r, 'Could not create repo');
       }
       repo = r.data;
     }
@@ -62,32 +62,32 @@
     const R = p => `/repos/${full}${p}`;
     const enc = s => s.split('/').map(encodeURIComponent).join('/');
 
-    onStep('Branch check ho rahi hai...');
+    onStep('Checking branch...');
     let parent = null, refExists = false;
     let r = await api(token, R('/git/ref/heads/' + enc(branch)));
     if (r.res.ok) { parent = r.data.object.sha; refExists = true; }
-    else if (r.res.status !== 404 && r.res.status !== 409) fail(r, 'Branch check fail');
+    else if (r.res.status !== 404 && r.res.status !== 409) fail(r, 'Branch check failed');
     else if (branch !== def) {
       const d = await api(token, R('/git/ref/heads/' + enc(def)));
       if (d.res.ok) parent = d.data.object.sha;
     }
 
     let bootstrap = false;
-    if (!parent) { // khaali repo: Git Data API yahan kaam nahi karta, pehle ek init commit chahiye
-      onStep('Khaali repo mila — pehla commit ban raha hai...');
+    if (!parent) { // empty repo: the Git Data API needs a first commit
+      onStep('Empty repo found. Creating the first commit...');
       const body = { message: 'Initialize repository', content: btoa('init') };
       if (branch === def) body.branch = branch;
       const c = await api(token, R('/contents/.treeforge-init'), { method: 'PUT', body: JSON.stringify(body) });
-      if (!c.res.ok) fail(c, 'Khaali repo initialize nahi hua');
+      if (!c.res.ok) fail(c, 'Could not initialize the empty repo');
       parent = c.data.commit.sha; bootstrap = true;
       if (branch === def) refExists = true;
     }
 
     const pc = await api(token, R('/git/commits/' + parent));
-    if (!pc.res.ok) fail(pc, 'Parent commit nahi mila');
+    if (!pc.res.ok) fail(pc, 'Parent commit not found');
     const baseTree = pc.data.tree.sha;
 
-    onStep('Files upload ho rahi hain...');
+    onStep('Uploading files...');
     const tree = new Array(files.length); let done = 0, idx = 0;
     onProgress(0, files.length);
     async function worker() {
@@ -95,7 +95,7 @@
         const i = idx++, f = files[i];
         const bytes = f.file ? new Uint8Array(await f.file.arrayBuffer()) : new TextEncoder().encode(f.content || '');
         const b = await api(token, R('/git/blobs'), { method: 'POST', body: JSON.stringify({ content: b64(bytes), encoding: 'base64' }) });
-        if (!b.res.ok) fail(b, `"${f.path}" upload nahi hui`);
+        if (!b.res.ok) fail(b, `"${f.path}" failed to upload`);
         tree[i] = { path: f.path, mode: '100644', type: 'blob', sha: b.data.sha };
         onProgress(++done, files.length);
       }
@@ -103,17 +103,17 @@
     await Promise.all([worker(), worker(), worker(), worker()]);
     if (bootstrap && !files.some(f => f.path === '.treeforge-init')) tree.push({ path: '.treeforge-init', mode: '100644', type: 'blob', sha: null });
 
-    onStep('Tree aur commit ban raha hai...');
+    onStep('Building tree and commit...');
     const t = await api(token, R('/git/trees'), { method: 'POST', body: JSON.stringify({ base_tree: baseTree, tree }) });
-    if (!t.res.ok) fail(t, 'Tree nahi bana');
+    if (!t.res.ok) fail(t, 'Could not create tree');
     const c = await api(token, R('/git/commits'), { method: 'POST', body: JSON.stringify({ message: o.message || 'Add project via TreeForge', tree: t.data.sha, parents: [parent] }) });
-    if (!c.res.ok) fail(c, 'Commit nahi bana');
+    if (!c.res.ok) fail(c, 'Could not create commit');
 
-    onStep('Branch update ho rahi hai...');
+    onStep('Updating branch...');
     const u = refExists
       ? await api(token, R('/git/refs/heads/' + enc(branch)), { method: 'PATCH', body: JSON.stringify({ sha: c.data.sha }) })
       : await api(token, R('/git/refs'), { method: 'POST', body: JSON.stringify({ ref: 'refs/heads/' + branch, sha: c.data.sha }) });
-    if (!u.res.ok) fail(u, 'Branch update nahi hui');
+    if (!u.res.ok) fail(u, 'Could not update branch');
     return { repoUrl: repo.html_url, commitUrl: `${repo.html_url}/commit/${c.data.sha}`, sha: c.data.sha };
   }
   g.TF = Object.assign(g.TF || {}, { gh: { connect, listRepos, push } });
