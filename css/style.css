@@ -176,3 +176,4 @@ h1{text-wrap:balance}
 .foot nav{display:flex;flex-wrap:wrap;gap:8px 18px;justify-content:center}
 .foot a{color:var(--mut);font-size:13px;text-decoration:none}.foot a:hover{color:var(--acc)}
 .foot p{margin:12px 0 0;color:var(--mut);font-size:12px}
+.skip{position:absolute;left:-9999px;top:0;z-index:100;padding:10px 14px;background:#fff;color:#000;border-radius:0 0 8px 0}.skip:focus{left:0}

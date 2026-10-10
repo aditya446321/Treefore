@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="google-site-verification" content="9E6AMmn4IhA1akm4SMojNbmeibEWR3238oomr6mvyvk" />
   <meta name="description" content="TreeForge turns a pasted folder tree or an uploaded folder into a ZIP or a single GitHub commit. Free, runs in your browser, no sign-up.">
-  <meta name="keywords" content="folder tree to zip, tree to github, project scaffold, upload folder to github, github push from phone, ascii tree parser">
   <meta name="robots" content="index,follow,max-image-preview:large">
   <meta name="author" content="TreeForge">
   <meta name="theme-color" content="#0a0b09">
@@ -27,10 +26,14 @@
   <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
   <link rel="manifest" href="manifest.webmanifest">
-  <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"TreeForge","url":"https://treefore.vercel.app/","inLanguage":"en"},{"@type":"WebApplication","name":"TreeForge","url":"https://treefore.vercel.app/","applicationCategory":"DeveloperApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","inLanguage":"en","description":"Convert a folder tree or uploaded folder into a ZIP file or a GitHub commit, right in your browser.","featureList":["Paste or write a folder tree","Upload a folder","Download as ZIP","Push to GitHub in one commit","Automatic setup of empty repositories","Friendly error hints for invalid trees"],"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}},{"@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is TreeForge free?","acceptedAnswer":{"@type":"Answer","text":"Yes. TreeForge is free, needs no sign-up and has no usage limits. Everything runs in your browser."}},{"@type":"Question","name":"Are my files or my GitHub token sent to your server?","acceptedAnswer":{"@type":"Answer","text":"No. TreeForge has no backend. Files are built in your browser. When you push, requests go directly from your browser to api.github.com. Your token is stored only on your own device and stays there until GitHub rejects it or you disconnect."}},{"@type":"Question","name":"What permissions does the GitHub token need?","acceptedAnswer":{"@type":"Answer","text":"For a classic token, the repo scope. For a fine-grained token, Contents with Read and write access to the repository you want to push to."}},{"@type":"Question","name":"Can I push to an empty repository?","acceptedAnswer":{"@type":"Answer","text":"Yes. An empty repository is detected automatically and set up for you. Because GitHub needs a first commit before bulk uploads work, an empty repo receives two commits: the first file, then the rest."}},{"@type":"Question","name":"Which tree formats can I paste?","acceptedAnswer":{"@type":"Answer","text":"Output of the tree command (├── └── │), ASCII trees (+-- and |--), bullet lists, and plain indented lists with 2, 3 or 4 spaces. End a name with / to mark a folder."}},{"@type":"Question","name":"Is there a file size limit?","acceptedAnswer":{"@type":"Answer","text":"When you upload a folder, files over 100 MB are skipped. .git, node_modules and .DS_Store are ignored automatically. GitHub's own limits also apply to pushes."}}]}]}</script>
+  <link rel="alternate" type="text/plain" href="llms.txt" title="llms.txt">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"TreeForge","url":"https://treefore.vercel.app/","inLanguage":"en"}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"TreeForge","url":"https://treefore.vercel.app/","applicationCategory":"DeveloperApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","inLanguage":"en","description":"Convert a folder tree or uploaded folder into a ZIP file or a GitHub commit, right in your browser.","featureList":["Paste or write a folder tree","Upload a folder","Download as ZIP","Push to GitHub in one commit","Automatic setup of empty repositories","Friendly error hints for invalid trees"],"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"dateModified":"2026-10-10"}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is TreeForge free?","acceptedAnswer":{"@type":"Answer","text":"Yes. TreeForge is free, needs no sign-up and has no usage limits. Everything runs in your browser."}},{"@type":"Question","name":"Are my files or my GitHub token sent to your server?","acceptedAnswer":{"@type":"Answer","text":"No. TreeForge has no backend. Files are built in your browser. When you push, requests go directly from your browser to api.github.com. Your token is stored only on your own device and stays there until GitHub rejects it or you disconnect."}},{"@type":"Question","name":"What permissions does the GitHub token need?","acceptedAnswer":{"@type":"Answer","text":"For a classic token, the repo scope. For a fine-grained token, Contents with Read and write access to the repository you want to push to."}},{"@type":"Question","name":"Can I push to an empty repository?","acceptedAnswer":{"@type":"Answer","text":"Yes. An empty repository is detected automatically and set up for you. Because GitHub needs a first commit before bulk uploads work, an empty repo receives two commits: the first file, then the rest."}},{"@type":"Question","name":"Which tree formats can I paste?","acceptedAnswer":{"@type":"Answer","text":"Output of the tree command (├── └── │), ASCII trees (+-- and |--), bullet lists, and plain indented lists with 2, 3 or 4 spaces. End a name with / to mark a folder."}},{"@type":"Question","name":"Is there a file size limit?","acceptedAnswer":{"@type":"Answer","text":"When you upload a folder, files over 100 MB are skipped. .git, node_modules and .DS_Store are ignored automatically. Limits set by the host also apply to pushes."}}]}</script>
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<a class="skip" href="#app">Skip to tool</a>
 <header class="top">
   <a class="brand" href="./"><img src="assets/favicon.svg" alt="" width="30" height="30"><b>TreeForge</b></a>
   <div class="topr"><button class="acc" id="accBtn" hidden aria-label="GitHub account"><i class="dot on"></i><span id="accName"></span></button><button class="btn ghost sm" id="helpBtn">How it works</button></div>
@@ -51,11 +54,11 @@
 
 <noscript><p class="wrap">TreeForge needs JavaScript to run.</p></noscript>
 
-<div id="dropAll" hidden><div>Drop to load your folder</div></div>
+<div id="dropAll" hidden><div>Drop to load it</div></div>
 <main class="wrap" id="app">
   <section class="card input">
     <h2>1. Input</h2>
-    <div class="tabs" role="tablist">
+    <div class="tabs" role="group" aria-label="Input mode">
       <button class="tab on" data-mode="paste">Paste tree</button>
       <button class="tab" data-mode="upload">Upload folder</button>
     </div>
@@ -70,10 +73,10 @@
         <button type="button" data-t="in" title="Put inside the folder above (Tab)">⇥ In</button>
         <button type="button" data-t="out" title="Move one level out (Shift+Tab)">⇤ Out</button>
         <i class="sep"></i>
-        <button type="button" data-ins="/" title="Folder marker">/</button>
-        <button type="button" data-ins="├── ">├──</button>
-        <button type="button" data-ins="└── ">└──</button>
-        <button type="button" data-ins="│   ">│</button>
+        <button type="button" aria-label="Insert folder marker" data-ins="/" title="Folder marker">/</button>
+        <button type="button" aria-label="Insert branch" data-ins="├── ">├──</button>
+        <button type="button" aria-label="Insert last branch" data-ins="└── ">└──</button>
+        <button type="button" aria-label="Insert vertical line" data-ins="│   ">│</button>
         <i class="sep"></i>
         <button type="button" data-t="tidy" title="Redraw the lines neatly">✨ Tidy</button>
         <button type="button" data-t="clear">Clear</button>
@@ -89,15 +92,15 @@
 
     <div id="uploadBox" hidden>
       <div class="drop" id="drop">
-        <div class="dz-icon" aria-hidden="true"><svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14a4 4 0 0 1 4-4h9l4 5h15a4 4 0 0 1 4 4v15a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4z"/><path d="M24 33V21m-5 5 5-5 5 5"/></svg></div><p class="dz-title">Drop a folder here</p><p class="dz-sub">or pick one below</p>
+        <div class="dz-icon" aria-hidden="true"><svg viewBox="0 0 48 48" width="44" height="44" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 14a4 4 0 0 1 4-4h9l4 5h15a4 4 0 0 1 4 4v15a4 4 0 0 1-4 4H10a4 4 0 0 1-4-4z"/><path d="M24 33V21m-5 5 5-5 5 5"/></svg></div><p class="dz-title">Drop it here</p><p class="dz-sub">or pick one below</p>
         <div class="row center">
           <button class="btn" id="pickFolder">Choose folder</button>
           <button class="btn ghost" id="pickFiles">Choose files</button>
         </div>
         <small>No folder picker on your phone? Use “Choose files”. <code>.git</code>, <code>node_modules</code> and <code>.DS_Store</code> are skipped automatically.</small>
       </div>
-      <input type="file" id="folderInput" webkitdirectory directory multiple hidden>
-      <input type="file" id="filesInput" multiple hidden>
+      <input type="file" aria-label="Choose folder" id="folderInput" webkitdirectory directory multiple hidden>
+      <input type="file" aria-label="Choose files" id="filesInput" multiple hidden>
       <div id="uploadInfo" class="upinfo" hidden></div>
     </div>
   </section>
@@ -110,7 +113,7 @@
 
   <section class="card preview">
     <div class="head"><h2>Preview</h2><span id="counts" class="muted mono"></span></div>
-    <input id="filter" class="field" placeholder="Filter files..." autocomplete="off">
+    <input id="filter" aria-label="Filter files" class="field" placeholder="Filter files..." autocomplete="off">
     <div id="tree" class="treebox mono"></div>
     <div id="autoNote" class="autonote"></div>
   </section>
@@ -119,8 +122,8 @@
 <section class="info" aria-label="About TreeForge">
   <article id="what">
     <h2>What TreeForge does</h2>
-    <p>TreeForge turns a folder tree into real files. Paste the output of the <code>tree</code> command, write your own structure with the helper buttons, or drop in an existing folder. You get a preview of every folder and file, then you can download everything as a ZIP or push it to a GitHub repository in a single flow.</p>
-    <p>It is made for scaffolding a new project from a plan, copying a structure that someone shared in a README or chat, and uploading a folder to GitHub from a phone where Git is not available.</p>
+    <p>TreeForge turns a plain-text structure into real files. Paste the output of the <code>tree</code> command, write your own with the helper buttons, or drop in something you already have. You get a preview of everything, then download it all as an archive or send it to a repository in a single flow.</p>
+    <p>It suits scaffolding a new project from a plan, recreating a layout someone shared in a README or chat, and publishing code from a phone where Git is not available.</p>
   </article>
   <article id="how">
     <h2>How it works</h2>
@@ -162,37 +165,37 @@
     <h3>Which tree formats can I paste?</h3>
     <p>Output of the tree command (├── └── │), ASCII trees (+-- and |--), bullet lists, and plain indented lists with 2, 3 or 4 spaces. End a name with / to mark a folder.</p>
     <h3>Is there a file size limit?</h3>
-    <p>When you upload a folder, files over 100 MB are skipped. .git, node_modules and .DS_Store are ignored automatically. GitHub's own limits also apply to pushes.</p>
+    <p>When you upload a folder, files over 100 MB are skipped. .git, node_modules and .DS_Store are ignored automatically. Limits set by the host also apply to pushes.</p>
   </article>
 </section>
 
 <footer class="foot">
   <nav aria-label="Page sections"><a href="#app">Tool</a><a href="#what">About</a><a href="#how">How it works</a><a href="#formats">Formats</a><a href="#privacy">Privacy</a><a href="#faq">FAQ</a></nav>
-  <p>TreeForge · free folder tree to ZIP or GitHub</p>
+  <p>TreeForge · free, in-browser project scaffolding · Last updated <time datetime="2026-10-10">October 10, 2026</time> · <a href="llms.txt">llms.txt</a></p>
 </footer>
 
 <dialog id="connectDlg">
-  <div class="dhead"><b>Connect GitHub</b><button class="x" data-close>✕</button></div>
+  <div class="dhead"><b>Connect GitHub</b><button class="x" data-close aria-label="Close">✕</button></div>
   <p class="muted">A Personal Access Token is required (classic: <code>repo</code> scope; fine-grained: Contents → Read &amp; write). <a href="https://github.com/settings/tokens/new?scopes=repo&description=TreeForge" target="_blank" rel="noopener">Create a token →</a></p>
-  <p class="muted small">Your token stays on this device. Requests go straight to GitHub.</p>
-  <input id="tokenInput" class="field mono" type="password" placeholder="ghp_... ya github_pat_..." autocomplete="off">
+  <p class="muted small">Your token stays on this device.</p>
+  <input id="tokenInput" aria-label="GitHub token" class="field mono" type="password" placeholder="ghp_... ya github_pat_..." autocomplete="off">
   <div class="row"><button class="btn primary" id="connectBtn">Connect</button></div>
   <div class="err" id="connectErr" hidden></div>
 </dialog>
 
 <dialog id="accDlg">
-  <div class="dhead"><b>GitHub account</b><button class="x" data-close aria-label="Close">✕</button></div>
+  <div class="dhead"><b>Account</b><button class="x" data-close aria-label="Close">✕</button></div>
   <p class="muted" id="accInfo"></p>
-  <p class="muted small">Your token is saved on this device until GitHub says it expired. Requests go straight to GitHub.</p>
+  <p class="muted small">Your token is saved on this device until it expires. Requests go straight to GitHub.</p>
   <button class="btn danger" id="disBtn">Disconnect</button>
 </dialog>
 
 <dialog id="pushDlg">
   <div class="dhead"><b>Push to GitHub</b><button class="x" data-close aria-label="Close">✕</button></div>
   <div id="pushForm" class="stack">
-    <div class="tabs"><button class="tab on" data-target="existing">Existing repo</button><button class="tab" data-target="new">New repo</button></div>
+    <div class="tabs" role="group" aria-label="Repo type"><button class="tab on" data-target="existing">Existing repo</button><button class="tab" data-target="new">New repo</button></div>
     <div id="existingBox">
-      <input id="repoSearch" class="field" placeholder="Search repos..." autocomplete="off">
+      <input id="repoSearch" aria-label="Search repos" class="field" placeholder="Search repos..." autocomplete="off">
       <div id="repoList" class="repolist"></div>
     </div>
     <div id="newBox" hidden>
@@ -203,7 +206,7 @@
     <p class="note" id="repoNote">Empty repo? No problem. It is detected and set up automatically.</p>
     <div class="grid2">
       <div><label class="lbl" for="branch">Branch</label><input id="branch" class="field mono" placeholder="main" autocomplete="off"></div>
-      <div><label class="lbl">Files</label><div class="field mono" id="fileCount"></div></div>
+      <div><div class="lbl" id="fcLbl">Files</div><div class="field mono" id="fileCount" aria-labelledby="fcLbl"></div></div>
     </div>
     <label class="lbl" for="commitMsg">Commit message</label>
     <input id="commitMsg" class="field" value="Add project via TreeForge">
@@ -221,7 +224,7 @@
     <li><b>Input:</b> paste <code>tree</code> output, write your own with the helper buttons, or upload a folder.</li>
     <li><b>Preview:</b> check the structure. A name ending in <code>/</code>, or with items under it, is a folder.</li>
     <li><b>ZIP:</b> download the whole structure in one click.</li>
-    <li><b>GitHub:</b> connect once with a token. It stays saved until GitHub says it expired. Pick or create a repo and everything is pushed. Empty repos are set up automatically.</li>
+    <li><b>GitHub:</b> connect once with a token. It stays saved until it expires. Pick or create a repo and everything is pushed. Empty repos are set up automatically.</li>
   </ol>
   <div class="dhead"><b>Writing a tree correctly</b></div>
   <div class="guide">
