@@ -22,6 +22,7 @@
   <meta name="twitter:title" content="TreeForge — Turn a folder tree into a ZIP or GitHub repo">
   <meta name="twitter:description" content="Paste a tree or drop a folder. ZIP it or push it to GitHub in one commit.">
   <meta name="twitter:image" content="https://treefore.vercel.app/assets/og-image.png">
+  <link rel="preload" as="image" href="assets/favicon.svg" fetchpriority="high">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -35,7 +36,7 @@
 <body>
 <a class="skip" href="#app">Skip to tool</a>
 <header class="top">
-  <a class="brand" href="./"><img src="assets/favicon.svg" alt="" width="30" height="30"><b>TreeForge</b></a>
+  <a class="brand" href="./"><img src="assets/favicon.svg" srcset="assets/favicon.svg 1x, assets/favicon.svg 2x" alt="TreeForge logo" width="30" height="30" fetchpriority="high" decoding="async"><b>TreeForge</b></a>
   <div class="topr"><button class="acc" id="accBtn" hidden aria-label="GitHub account"><i class="dot on"></i><span id="accName"></span></button><button class="btn ghost sm" id="helpBtn">How it works</button></div>
 </header>
 
@@ -170,7 +171,8 @@
 </section>
 
 <footer class="foot">
-  <nav aria-label="Page sections"><a href="#app">Tool</a><a href="#what">About</a><a href="#how">How it works</a><a href="#formats">Formats</a><a href="#privacy">Privacy</a><a href="#faq">FAQ</a><a href="about.html">About us</a><a href="terms.html">Terms</a><a href="mailto:itaditya594@gmail.com">Contact</a><a href="https://github.com/aditya446321/Treefore" target="_blank" rel="noopener">GitHub repo</a></nav>
+  <nav aria-label="Page sections"><a href="#app">Tool</a><a href="#what">About</a><a href="#how">How it works</a><a href="#formats">Formats</a><a href="#privacy">Privacy</a><a href="#faq">FAQ</a><a href="about.html">About us</a><a href="terms.html">Terms</a><a href="about.html#editorial">Editorial policy</a><a href="mailto:itaditya594@gmail.com">Contact</a><a href="https://github.com/aditya446321/Treefore" target="_blank" rel="noopener">GitHub repo</a></nav>
+  <nav class="share" aria-label="Share TreeForge"><span>Share:</span><a href="https://twitter.com/intent/tweet?url=https%3A%2F%2Ftreefore.vercel.app%2F&text=TreeForge%20-%20folder%20tree%20to%20ZIP%20or%20GitHub" target="_blank" rel="noopener">X</a><a href="https://wa.me/?text=TreeForge%20https%3A%2F%2Ftreefore.vercel.app%2F" target="_blank" rel="noopener">WhatsApp</a><a href="https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Ftreefore.vercel.app%2F" target="_blank" rel="noopener">LinkedIn</a></nav>
   <p>Built and maintained by <a href="https://github.com/aditya446321/Treefore" rel="author noopener" target="_blank">Aditya</a> · <a href="mailto:itaditya594@gmail.com">itaditya594@gmail.com</a></p>
   <p>TreeForge · free, in-browser project scaffolding · Last updated <time datetime="2026-10-10">October 10, 2026</time> · <a href="about.html">About</a> · <a href="terms.html">Terms</a> · <a href="llms.txt">llms.txt</a></p>
 </footer>
