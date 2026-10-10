@@ -235,15 +235,16 @@
   /* ---------- GitHub: connection ---------- */
   // The token is saved until GitHub itself rejects it (401). Network problems never log you out.
   function ghStatus() {
-    const c = $('conn');
-    c.innerHTML = S.user
-      ? `<span class="dot on"></span><span>Connected as <b>${esc(S.user.login)}</b></span><button type="button" class="link" id="disBtn">Disconnect</button>`
-      : `<span class="dot"></span><span>Not connected</span>`;
+    $('accBtn').hidden = !S.user;
+    if (S.user) {
+      const n = S.user.login && S.user.login !== 'GitHub' ? S.user.login : '';
+      $('accName').textContent = n || 'Connected'; $('accInfo').textContent = n ? `Connected as ${n}.` : 'Connected to GitHub.';
+    }
     $('pushBtn').textContent = S.user ? 'Choose repo & push' : 'Connect & push';
   }
   function disconnect() {
     S.token = ''; S.user = null; S.repos = []; S.repo = null; S.reposLoaded = false;
-    store.set(TOK, ''); store.set(USR, ''); ghStatus(); toast('Disconnected. Token removed from this device.');
+    store.set(TOK, ''); store.set(USR, ''); ghStatus(); if ($('accDlg').open) $('accDlg').close(); toast('Disconnected. Token removed from this device.');
   }
   function expired() {
     disconnect();
@@ -420,11 +421,8 @@
       } catch (e) { show($('connectErr'), e.message || 'Could not connect'); }
       $('connectBtn').disabled = false;
     };
-    $('conn').addEventListener('click', e => {
-      const b = e.target.closest('#disBtn'); if (!b) return;
-      if (!b.dataset.sure) { b.dataset.sure = 1; b.textContent = 'Tap again to confirm'; setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = 'Disconnect'; } }, 3000); return; }
-      disconnect();
-    });
+    $('accBtn').onclick = () => $('accDlg').showModal();
+    $('disBtn').onclick = disconnect;
     document.querySelectorAll('[data-target]').forEach(b => b.onclick = () => setTarget(b.dataset.target));
     $('repoSearch').addEventListener('input', renderRepos);
     $('repoList').onclick = e => {
@@ -436,7 +434,7 @@
 
     // Restore the saved connection without any network call: nothing extra loads with the page.
     const saved = store.get(TOK);
-    if (saved) { S.token = saved; try { S.user = JSON.parse(store.get(USR) || 'null'); } catch (_) {} if (!S.user) S.user = { login: 'GitHub' }; }
+    if (saved) { S.token = saved; try { S.user = JSON.parse(store.get(USR) || 'null'); } catch (_) {} if (!S.user) S.user = { login: '' }; }
     recompute(); ghStatus();
   }
   init();

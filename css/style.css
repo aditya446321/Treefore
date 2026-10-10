@@ -13,9 +13,8 @@ a{color:var(--acc)}
 @media(min-width:900px){.hero{grid-template-columns:1.1fr .9fr;padding-top:56px}}
 .badge{display:inline-flex;align-items:center;gap:8px;margin:0 0 16px;font:600 12px var(--sans);color:var(--text);border:1px solid var(--line);background:rgba(17,20,14,.8);padding:6px 12px;border-radius:99px}
 .badge i{width:7px;height:7px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 0 rgba(198,255,0,.6);animation:ping 2s infinite}@keyframes ping{to{box-shadow:0 0 0 9px rgba(198,255,0,0)}}
-h1{margin:0;font-size:clamp(30px,5vw,46px);line-height:1.08;letter-spacing:-.035em;font-weight:800}
-h1 em{font-style:normal;background:linear-gradient(90deg,var(--acc),#8aff00 50%,var(--acc2));-webkit-background-clip:text;background-clip:text;color:transparent}
-.sub{max-width:44ch;color:var(--mut);font-size:clamp(15px,2vw,17px);margin:12px 0 18px}
+h1{margin:0;font-size:clamp(28px,4.6vw,44px);line-height:1.12;letter-spacing:-.025em;font-weight:700;color:var(--text)}
+.sub{max-width:46ch;color:var(--mut);font-size:clamp(15px,2vw,17px);line-height:1.6;margin:14px 0 22px}
 .cta{display:flex;gap:10px;flex-wrap:wrap}.cta .btn{min-height:50px;padding:12px 22px;font-size:15px}
 .autos{list-style:none;margin:22px 0 0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px 18px;max-width:460px;color:var(--mut);font-size:13px}
 .autos li::before{content:"✓";color:var(--acc);font-weight:800;margin-right:8px}
@@ -151,3 +150,16 @@ dialog[open]{display:flex;flex-direction:column;gap:10px;animation:rise .25s eas
 /* cleaner hero: animation only on wide screens, so the tool is one scroll away on phones */
 @media(max-width:899px){.forge{display:none}.hero{padding-top:24px;gap:0}.badge{margin-bottom:12px}}
 h1{text-wrap:balance}
+
+body{font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+h1{text-wrap:balance}
+.topr{display:flex;align-items:center;gap:8px}
+.acc{display:inline-flex;align-items:center;gap:7px;min-height:34px;max-width:150px;padding:0 12px;border:1px solid var(--line);background:transparent;color:var(--text);border-radius:99px;font:600 13px var(--sans);cursor:pointer}
+.acc span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acc:hover{border-color:#41492f}
+.pill{display:inline-flex;align-items:center;min-height:32px;padding:0 14px;border:1px solid var(--line);background:var(--card2);color:var(--text);border-radius:99px;font:600 12.5px var(--sans);cursor:pointer;transition:border-color .15s,background .15s}
+.pill:hover{border-color:#41492f;background:#1d2217}
+.hint{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px}
+#helpBtn{white-space:nowrap}
+@media(max-width:480px){.acc span{display:none}.acc{padding:0;width:34px;justify-content:center}.hero{padding-top:32px!important}}
+.hint{margin-bottom:8px}
